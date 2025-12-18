@@ -1,0 +1,28 @@
+project:
+  type: website
+
+website:
+  title: "Portrait génomique du Québec"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - href: intro.qmd
+        text: Introduction
+      - href: summary.qmd
+        text: Summary
+      - href: references.qmd
+        text: References
+
+bibliography: references.bib
+
+format:
+  html:
+    theme:
+      - cosmo
+      - brand
+  pdf:
+    documentclass: scrreprt
+
+
+
