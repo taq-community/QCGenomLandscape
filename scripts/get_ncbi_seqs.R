@@ -5,6 +5,7 @@ library(tidyverse)
 library(httr)
 library(jsonlite)
 library(logger)
+library(rentrez)
 
 # Configure logger to write only to file (no console output)
 log_dir <- "logs"
