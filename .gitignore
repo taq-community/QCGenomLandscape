@@ -1,1 +1,20 @@
 /.quarto/
+
+# R files
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+
+# Results and temporary files
+results/*.csv
+results/*.rds
+!results/.gitkeep
+figures/*.png
+!figures/.gitkeep
+
+logs/
+
+# Site output
+_site/

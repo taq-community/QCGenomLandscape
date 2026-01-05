@@ -1,0 +1,17 @@
+group;markers;query_marker
+Arthropods;COI,16S,18S;(COI[Gene] OR COX1[Gene] OR 16S[Gene])
+Conifers;rbcL,matK,ITS,trnL;(rbcL[Gene] OR matK[Gene] OR ITS[Gene])
+Bryophytes;rbcL,ITS,trnL,18S;(rbcL[Gene] OR ITS[Gene] OR trnL[Gene])
+Other taxons;18S,16S,ITS;(18S[Gene] OR 16S[Gene] OR ITS[Gene])
+Fungi;ITS,ITS1,ITS2;"(ITS1[Gene] OR ITS2[Gene] OR ""internal transcribed spacer""[All Fields])"
+Angiosperms;rbcL,matK,trnL,ITS2;(rbcL[Gene] OR matK[Gene] OR trnL[Gene] OR ITS2[Gene])
+Birds;COI,12S,16S,cytb;(COI[Gene] OR COX1[Gene] OR 12S[Gene] OR cytb[Gene])
+Other invertebrates;COI,18S,16S;(COI[Gene] OR 18S[Gene] OR 16S[Gene])
+Fish;COI,12S,16S,cytb;(COI[Gene] OR COX1[Gene] OR 12S[Gene] OR 16S[Gene])
+Algae;18S,rbcL,COI;(18S[Gene] OR rbcL[Gene] OR COI[Gene])
+Vascular cryptogam;rbcL,matK,trnL,ITS;(rbcL[Gene] OR matK[Gene] OR trnL[Gene])
+Mammals;COI,12S,16S,cytb;(COI[Gene] OR COX1[Gene] OR 12S[Gene] OR cytb[Gene])
+Amphibians;12S,16S,COI,cytb;(12S[Gene] OR 16S[Gene] OR COI[Gene])
+Other plants;rbcL,matK,ITS,trnL;(rbcL[Gene] OR matK[Gene] OR ITS[Gene])
+Reptiles;COI,12S,16S,cytb;(COI[Gene] OR COX1[Gene] OR 12S[Gene] OR cytb[Gene])
+Tunicates;COI,18S;(COI[Gene] OR 18S[Gene])

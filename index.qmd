@@ -1,5 +1,65 @@
-# Preface {.unnumbered}
+# Portrait Génomique du Québec {.unnumbered}
 
-This is a Quarto book.
+## Bienvenue
 
-To learn more about Quarto books visit <https://quarto.org/docs/books>.
+Ce projet présente un portrait complet de la disponibilité des données génomiques pour les espèces observées au Québec. En interrogeant les principales bases de données génomiques publiques, nous cartographions l'état actuel des connaissances génomiques de la biodiversité québécoise.
+
+## Objectifs
+
+- **Cartographier** la disponibilité des séquences d'ADN pour les ~24,800 espèces documentées au Québec
+- **Identifier** les lacunes dans les données génomiques
+- **Prioriser** les efforts futurs de séquençage
+- **Valoriser** les données existantes
+
+## Bases de données interrogées
+
+### NCBI (National Center for Biotechnology Information)
+La plus grande base de données publique de séquences génomiques au monde, incluant:
+- Séquences de gènes individuels
+- Génomes mitochondriaux
+- Génomes nucléaires complets
+
+### BOLD Systems (Barcode of Life Data System)
+Base de données spécialisée dans le barcoding ADN, particulièrement riche pour:
+- Les arthropodes (insectes, araignées, crustacés)
+- Les vertébrés (oiseaux, mammifères, poissons)
+- Séquences COI standardisées
+
+## Méthodologie
+
+Notre approche combine:
+
+1. **Liste d'espèces** - Basée sur les observations de Biodiversité Québec (BDQC)
+2. **Interrogation automatisée** - Via les APIs de NCBI et BOLD
+3. **Analyse taxonomique** - Statistiques par royaume, phylum, classe
+4. **Visualisations** - Cartes de chaleur, graphiques de couverture
+
+Voir la section [Introduction](intro.qmd) pour plus de détails.
+
+## Résultats préliminaires
+
+*Les résultats seront mis à jour après l'exécution complète de l'analyse.*
+
+- **Total d'espèces analysées**: ~24,800
+- **Groupes taxonomiques**: 6 royaumes (Animalia, Plantae, Fungi, etc.)
+- **Sources de données**: NCBI + BOLD Systems
+
+## Navigation
+
+- **[Introduction](intro.qmd)** - Contexte et méthodologie détaillée
+- **[Résumé](summary.qmd)** - Statistiques et visualisations principales
+- **[Références](references.qmd)** - Sources et bibliographie
+
+## À propos
+
+Ce projet est développé dans le cadre de l'initiative Biodiversité Québec, visant à mieux comprendre et préserver la biodiversité de la province.
+
+### Équipe
+
+- Steve Vissault
+- Marie Pier Brochu
+- Valérie Langlois
+
+---
+
+*Dernière mise à jour: 18 décembre 2025*
