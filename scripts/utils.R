@@ -1,4 +1,3 @@
-
 # Function to parse lat/lon strings and convert to signed decimal degrees
 parse_latlon <- function(latlon_string) {
   if (is.na(latlon_string) || latlon_string == "") {
@@ -6,13 +5,13 @@ parse_latlon <- function(latlon_string) {
   }
 
   # Extract all numbers (including decimals)
-  numbers <- str_extract_all(latlon_string, "\\d+\\.?\\d*")[[1]]
+  numbers <- stringr::str_extract_all(latlon_string, "\\d+\\.?\\d*")[[1]]
 
   # Extract cardinal directions
-  has_N <- str_detect(latlon_string, "N")
-  has_S <- str_detect(latlon_string, "S")
-  has_E <- str_detect(latlon_string, "E")
-  has_W <- str_detect(latlon_string, "W")
+  has_N <- stringr::str_detect(latlon_string, "N")
+  has_S <- stringr::str_detect(latlon_string, "S")
+  has_E <- stringr::str_detect(latlon_string, "E")
+  has_W <- stringr::str_detect(latlon_string, "W")
 
   if (length(numbers) < 2) {
     return(list(lat = NA_real_, lon = NA_real_))
@@ -30,26 +29,30 @@ parse_latlon <- function(latlon_string) {
 }
 
 # Parse lat/lon and add as separate columns
-ncbi_results <- ncbi_results |>
-  mutate(
-    parsed_coords = map(lat_lon, parse_latlon),
-    latitude = map_dbl(parsed_coords, "lat"),
-    longitude = map_dbl(parsed_coords, "lon")
+ncbi_results <- readRDS("results/ncbi_results.rds") |>
+  dplyr::mutate(
+    parsed_coords = purrr::map(lat_lon, parse_latlon),
+    latitude = purrr::map_dbl(parsed_coords, "lat"),
+    longitude = purrr::map_dbl(parsed_coords, "lon")
   ) |>
-  select(-parsed_coords)
+  dplyr::select(-parsed_coords)
 
 ncbi_sf <- sf::st_as_sf(
   dplyr::filter(ncbi_results, !is.na(latitude) & !is.na(longitude)),
-  coords = c("longitude", "latitude"), 
+  coords = c("longitude", "latitude"),
   crs = 4326
 )
 
-mapview::mapview(ncbi_sf)
+# From https://open.canada.ca/data/en/dataset/306e5004-534b-4110-9feb-58e3a5c3fd97
+qc <- sf::read_sf("data/canvec_1M_CA_Admin.gdb", layer = "geo_political_region_2") |>
+  dplyr::filter(jurisdiction == 102) |>
+  sf::st_transform(4326)
 
-### GENOME AVAILABLE ###
-# Vérifier s'il existe des génomes complets
-# genome_search <- rentrez::entrez_search(
-#   db = "genome",
-#   term = species_name,
-#   retmax = 0
-# )
+can <- sf::read_sf("data/canvec_1M_CA_Admin.gdb", layer = "geo_political_region_2") |>
+  dplyr::filter(country == 140) |>
+  sf::st_transform(4326)
+
+ncbi_sf <- ncbi_sf |> dplyr::mutate(
+  in_ca = lengths(sf::st_within(geometry, can)) > 0,
+  in_qc = lengths(sf::st_within(geometry, qc)) > 0
+)

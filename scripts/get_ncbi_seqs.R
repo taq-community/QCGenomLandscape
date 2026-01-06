@@ -34,7 +34,7 @@ queries <- qc_species |>
 
 # Initialize logger
 log_info("Starting NCBI queries for {length(queries)} species")
-set_entrez_key("17809d1d46e2c224c5b3b17ff713ddacd309")
+set_entrez_key(Sys.getenv("NCBI_API_KEY"))
 
 deficient_queries <- list()
 high_id_queries <- list()

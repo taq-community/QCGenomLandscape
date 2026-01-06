@@ -15,6 +15,9 @@ figures/*.png
 !figures/.gitkeep
 
 logs/
+data/
+results/
 
 # Site output
 _site/
+.Renviron
