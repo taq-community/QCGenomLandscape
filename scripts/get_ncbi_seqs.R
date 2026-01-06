@@ -19,7 +19,6 @@ log_threshold(INFO)
 
 log_info("Logger initialized. Writing to: {log_file}")
 
-
 query_primers <- read.csv2("data/primers_map_group_bdqc_list_01122025.csv")
   
 qc_species <- read.csv("data/bdqc_list_01122025.csv") |>
@@ -29,7 +28,9 @@ qc_species <- read.csv("data/bdqc_list_01122025.csv") |>
   mutate(query = ifelse(!is.na(query_marker), glue::glue("{species}[Organism] AND {query_marker} AND voucher[Title]"), NA))
 
 queries <- qc_species |>
-  pull(query)
+  pull(query) |>
+  na.omit() |>
+  unique()
 
 # Initialize logger
 log_info("Starting NCBI queries for {length(queries)} species")
@@ -89,10 +90,6 @@ ncbi_results <- map_df(seq_along(queries), \(i) {
           return(NULL)
         }
       )
-
-      if (is.null(results)) {
-        return(tibble())
-      }
 
       retrieved_ids <- length(results$id)
 
