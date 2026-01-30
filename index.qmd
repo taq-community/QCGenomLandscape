@@ -2,7 +2,17 @@
 
 ## Bienvenue
 
-Ce projet présente un portrait complet de la disponibilité des données génomiques pour les espèces observées au Québec. En interrogeant les principales bases de données génomiques publiques, nous cartographions l'état actuel des connaissances génomiques de la biodiversité québécoise.
+Ce projet présente un portrait complet des données génomiques pour les espèces observées au Québec. En interrogeant les principales bases de données génomiques publiques, nous cartographions l'état actuel des connaissances génomiques de la biodiversité québécoise.
+
+# Questions et figures 
+
+Sur la liste des espèces documentées au Québec, combien dispose de séquences d'ADN dans les bases de données publiques? Quels groupes taxonomiques sont bien représentés, et lesquels présentent des lacunes significatives?
+
+Présenter un tableau des amorces par groupes taxonomiques.
+
+Faire une figure au niveau de l'espèces et une autre au niveau du genre.
+
+
 
 ## Objectifs
 

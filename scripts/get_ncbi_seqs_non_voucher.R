@@ -13,7 +13,7 @@ if (!dir.exists(log_dir)) {
   dir.create(log_dir, recursive = TRUE)
 }
 
-log_file <- file.path(log_dir, sprintf("ncbi_queries_%s.log", format(Sys.time(), "%Y%m%d_%H%M%S")))
+log_file <- file.path(log_dir, sprintf("ncbi_queries_non_voucher_%s.log", format(Sys.time(), "%Y%m%d_%H%M%S")))
 log_appender(appender_file(log_file))
 log_threshold(INFO)
 
@@ -25,7 +25,7 @@ qc_species <- read.csv("data/bdqc_list_01122025.csv") |>
   filter(rank == "species") |>
   mutate(group = tolower(group_en)) |>
   left_join(query_primers |> mutate(group = tolower(group)), by = c("group")) |>
-  mutate(query = ifelse(!is.na(query_marker), glue::glue("{species}[Organism] AND {query_marker} AND voucher[Title]"), NA))
+  mutate(query = ifelse(!is.na(query_marker), glue::glue("{species}[Organism] AND {query_marker}"), NA))
 
 queries <- qc_species |>
   pull(query) |>
