@@ -1,226 +1,172 @@
 # Portrait Génomique du Québec
 
-Un projet pour cartographier la disponibilité des données génomiques pour toutes les espèces observées au Québec.
+Cartographie de la disponibilité des données génomiques pour les espèces documentées au Québec. Le projet interroge les bases de données NCBI et BOLD Systems afin d'établir un portrait de la couverture génomique des ~24 800 espèces de la liste BDQC, avec un focus sur les marqueurs moléculaires (COI, cytb, gènes mitochondriaux) et les espèces à statut de conservation.
 
 ## Vue d'ensemble
 
-Ce projet interroge les principales bases de données génomiques publiques (NCBI et BOLD Systems) pour établir un portrait de la couverture génomique des ~24,800 espèces documentées au Québec.
+Le pipeline:
+
+1. Télécharge les séquences barcode disponibles sur **BOLD Systems** pour le Québec
+2. Interroge **NCBI** pour les séquences nucléotidiques (avec et sans voucher) ainsi que les génomes complets
+3. Filtre géographiquement les enregistrements avec coordonnées à l'intérieur du Québec
+4. Intègre les statuts de conservation (COSEPAC / LEMV) et produit des figures de couverture
 
 ## Structure du projet
 
 ```
 QCGenomLandscape/
 ├── data/
-│   └── bdqc_list_01122025.csv       # Liste des espèces du Québec
+│   ├── bdqc_list_01122025.csv                    # Liste des espèces BDQC (~24 800 sp.)
+│   ├── CA_especes_en_peril.csv                   # Espèces à statut COSEPAC (Canada)
+│   ├── QC_especes_en_peril.csv                   # Espèces à statut LEMV (Québec)
+│   ├── primers_keck_2022.csv                     # Amorces de référence (Keck 2022)
+│   ├── primers_map_group_bdqc_list_01122025.csv  # Correspondance marqueurs × groupes taxonomiques
+│   └── canvec_1M_CA_Admin.gdb/                  # Limites administratives (CanVec 1M)
 ├── scripts/
-│   ├── query_genomic_data.R         # Script principal d'interrogation
-│   ├── create_visualizations.R      # Génération des figures
-│   ├── test_api.R                   # Test rapide des APIs
-│   ├── utils.R                      # Fonctions utilitaires
-│   └── README.md                    # Guide d'utilisation
-├── results/                         # Résultats des analyses (généré)
-├── figures/                         # Visualisations (généré)
-├── _quarto.yml                      # Configuration du site web
-├── index.qmd                        # Page d'accueil
-├── intro.qmd                        # Introduction
-├── summary.qmd                      # Résumé
-├── references.qmd                   # Références
-└── APPROCHE.md                      # Documentation méthodologique
+│   ├── get_bold_seqs.R              # Télécharge les séquences BOLD pour le Québec
+│   ├── get_ncbi_seqs.R              # Requêtes NCBI nucléotide (séquences avec voucher)
+│   ├── get_ncbi_seqs_non_voucher.R  # Requêtes NCBI nucléotide (sans filtre voucher) + filtrage QC
+│   ├── get_ncbi_full_genome.R       # Requêtes NCBI genome/nucléotide pour génomes complets
+│   ├── get_sra.R                    # Récupération des données SRA
+│   ├── create_dataframe.R           # Intègre tous les résultats en un tableau récapitulatif
+│   ├── taxon_representation.R       # Figures de prévalence génique et couverture espèces à risque
+│   ├── map_bold.R                   # Cartographie des données BOLD
+│   ├── map_ncbi.R                   # Cartographie des données NCBI
+│   ├── map_combined.R               # Application Shiny: carte hexagonale BOLD + NCBI
+│   ├── quality_seq_check.R          # Contrôle qualité des séquences
+│   └── utils.R                      # Fonctions utilitaires (ex. parse_latlon)
+├── results/
+│   ├── bold_qc_data.tsv                          # Séquences BOLD brutes (Québec)
+│   ├── ncbi_results.rds                          # Séquences NCBI avec voucher
+│   ├── ncbi_non_voucher_results.rds              # Séquences NCBI sans voucher
+│   ├── deficient_queries.rds                     # Requêtes en erreur (voucher)
+│   ├── deficient_queries_non_voucher_results.rds # Requêtes en erreur (non-voucher)
+│   ├── high_id_queries.rds                       # Requêtes avec > 500 résultats (voucher)
+│   ├── high_id_queries_non_voucher_results.rds   # Requêtes avec > 500 résultats (non-voucher)
+│   ├── genes_subsamp_50_df.rds                   # Gènes annotés (sous-échantillon 50 acc./sp.)
+│   ├── genes_prevalence.png / .svg               # Figure: prévalence des gènes par groupe
+│   └── risk_status_coverage.png / .svg           # Figure: couverture génomique × statut de risque
+└── logs/                            # Journaux horodatés des requêtes API
 ```
 
-## Installation
+## Prérequis
 
-### Prérequis
+- R ≥ 4.1
+- Clé API NCBI (gratuite sur https://www.ncbi.nlm.nih.gov/account/)
 
-- R (≥ 4.0.0)
-- Quarto (pour générer le site web)
-
-### Packages R nécessaires
+### Packages R
 
 ```r
-# Installer tous les packages nécessaires
 install.packages(c(
-  "tidyverse",
-  "httr",
-  "jsonlite",
-  "rentrez",
-  "bold",
-  "ggplot2",
-  "viridis",
-  "patchwork",
-  "scales"
+  "tidyverse", "httr2", "rentrez", "logger", "glue",
+  "xml2", "sf", "ggplot2", "purrr",
+  "shiny", "bslib", "leaflet", "mapview"
 ))
+```
+
+### Clé API NCBI
+
+Ajouter dans `.Renviron` à la racine du projet:
+
+```
+NCBI_API_KEY=votre_clé_ici
 ```
 
 ## Utilisation
 
-### 1. Tester les APIs
+Les scripts doivent être exécutés dans l'ordre suivant:
 
-Avant de lancer l'analyse complète, testez que tout fonctionne:
-
-```bash
-Rscript scripts/test_api.R
-```
-
-### 2. Lancer l'analyse (mode test)
-
-Par défaut, le script traite 100 espèces en mode test:
+### 1. Télécharger les séquences BOLD
 
 ```bash
-Rscript scripts/query_genomic_data.R
+Rscript scripts/get_bold_seqs.R
 ```
 
-### 3. Lancer l'analyse complète
+Interroge le portail BOLD Systems pour toutes les séquences du Québec et enregistre le résultat dans `results/bold_qc_data.tsv`.
 
-Pour traiter toutes les espèces (~6-8 heures):
-
-```r
-# Dans query_genomic_data.R, modifier la ligne 270:
-TEST_MODE <- FALSE
-
-# Puis lancer:
-Rscript scripts/query_genomic_data.R
-```
-
-### 4. Créer les visualisations
-
-Après avoir obtenu les résultats:
+### 2. Récupérer les séquences NCBI (avec voucher)
 
 ```bash
-Rscript scripts/create_visualizations.R
+Rscript scripts/get_ncbi_seqs.R
 ```
 
-### 5. Générer le site web
+Pour chaque espèce × marqueur moléculaire, interroge la base `nucleotide` de NCBI en filtrant sur les séquences associées à un spécimen voucher. Produit `results/ncbi_results.rds`.
+
+### 3. Récupérer les séquences NCBI (sans voucher)
 
 ```bash
-quarto render
-quarto preview
+Rscript scripts/get_ncbi_seqs_non_voucher.R
 ```
 
-## Bases de données interrogées
+Même requêtes sans le filtre `voucher[Title]`. Filtre ensuite les enregistrements géoréférencés à l'intérieur du Québec à l'aide des limites CanVec. Produit `results/ncbi_non_voucher_results.rds`.
 
-### NCBI (National Center for Biotechnology Information)
-- **nucleotide**: Toutes les séquences d'ADN/ARN
-- **genome**: Génomes complets assemblés
-- **API**: rentrez (package R)
+### 4. Récupérer les génomes complets
 
-### BOLD Systems (Barcode of Life Data System)
-- **Focus**: Barcoding ADN (COI)
-- **API**: HTTP REST
-- **Particulièrement riche pour**: Arthropodes et vertébrés
+```bash
+Rscript scripts/get_ncbi_full_genome.R
+```
 
-## Outputs
+Interroge les bases `genome` (génomes nucléaires) et `nucleotide` (génomes mitochondriaux complets) pour chaque espèce de la liste BDQC. Produit `results/ncbi_genome_results.rds`.
 
-### Fichiers de données
+### 5. Analyser et produire les figures
 
-Le dossier `results/` contient:
+```bash
+Rscript scripts/taxon_representation.R
+```
 
-- `genomic_data_test.csv` - Résultats du test (100 espèces)
-- `genomic_data_complete.csv` - Résultats complets
-- `genomic_data_with_taxonomy.csv` - Résultats avec taxonomie complète
-- `summary_statistics.csv` - Statistiques générales
-- `statistics_by_taxonomy.csv` - Statistiques par groupe taxonomique
-- `species_without_genomic_data.csv` - Espèces sans données
-- `quick_report.md` - Rapport rapide
+Génère les figures de prévalence génique par groupe taxonomique et de couverture des espèces à statut de conservation. Produit `results/genes_prevalence.svg` et `results/risk_status_coverage.svg`.
 
-### Visualisations
+### 6. Construire le tableau récapitulatif
 
-Le dossier `figures/` contient:
+```bash
+Rscript scripts/create_dataframe.R
+```
 
-- `00_composite.png` - Figure composite
-- `01_overview.png` - Vue d'ensemble de la couverture
-- `02_coverage_by_kingdom.png` - Couverture par royaume
-- `03_top_classes.png` - Top 20 des classes
-- `04_heatmap_coverage.png` - Carte de chaleur phylum × classe
-- `05_sequence_distribution.png` - Distribution des séquences
-- `06_genomes_by_class.png` - Génomes complets par classe
+Intègre les résultats NCBI, les gènes annotés, la taxonomie BDQC et les statuts de conservation (COSEPAC/LEMV) en un seul tableau par espèce.
 
-## Fonctions utilitaires
-
-Le fichier `scripts/utils.R` contient des fonctions pratiques:
+### 7. Visualiser sur la carte interactive
 
 ```r
-source("scripts/utils.R")
-
-# Charger et afficher un résumé
-results <- load_results("results/genomic_data_complete.csv")
-print_summary(results)
-
-# Identifier les erreurs
-errors <- find_errors(results)
-
-# Exporter les espèces sans données
-no_data <- export_species_without_data(results)
-
-# Créer un rapport rapide
-create_quick_report(results)
+shiny::runApp("scripts/map_combined.R")
 ```
 
-## Exemples d'analyse
+Lance une application Shiny avec une carte hexagonale (10 km) des occurrences BOLD + NCBI géoréférencées au Québec, filtrable par famille, rang taxonomique et période de collecte.
 
-### Charger et explorer les résultats
+## Bases de données
 
-```r
-library(tidyverse)
+| Source | Contenu | Accès |
+|--------|---------|-------|
+| BOLD Systems | Barcodes ADN (COI principalement), enregistrements géoréférencés | API REST (`httr2`) |
+| NCBI Nucleotide | Séquences nucléotidiques par espèce × marqueur | `rentrez` |
+| NCBI Genome | Génomes nucléaires assemblés | `rentrez` |
 
-# Charger les résultats
-results <- read_csv("results/genomic_data_with_taxonomy.csv")
+## Outputs principaux
 
-# Espèces les mieux couvertes
-top_species <- results %>%
-  filter(!is.na(ncbi_sequences)) %>%
-  arrange(desc(ncbi_sequences)) %>%
-  select(species, kingdom, ncbi_sequences, bold_records, genome_available) %>%
-  head(20)
-
-# Groupes taxonomiques les mieux couverts
-coverage_by_class <- results %>%
-  group_by(class) %>%
-  summarise(
-    n_species = n(),
-    n_with_data = sum(ncbi_sequences > 0 | bold_records > 0, na.rm = TRUE),
-    pct_coverage = round(n_with_data / n_species * 100, 2)
-  ) %>%
-  filter(n_species >= 10) %>%
-  arrange(desc(pct_coverage))
-```
-
-### Identifier les lacunes
-
-```r
-# Espèces communes sans données génomiques
-common_no_data <- results %>%
-  filter(
-    obs_count > 100,
-    (is.na(ncbi_sequences) | ncbi_sequences == 0),
-    (is.na(bold_records) | bold_records == 0)
-  ) %>%
-  arrange(desc(obs_count)) %>%
-  select(species, kingdom, class, obs_count, vernacular_fr)
-```
+| Fichier | Description |
+|---------|-------------|
+| `results/bold_qc_data.tsv` | Données BOLD brutes pour le Québec |
+| `results/ncbi_results.rds` | Séquences NCBI avec voucher (métadonnées complètes) |
+| `results/ncbi_non_voucher_results.rds` | Séquences NCBI sans filtre voucher |
+| `results/genes_subsamp_50_df.rds` | Gènes annotés (sous-échantillon 50 acc./sp.) |
+| `results/genes_prevalence.svg` | Prévalence des marqueurs géniques par groupe taxonomique |
+| `results/risk_status_coverage.svg` | Couverture génomique par statut de risque (QC) |
 
 ## Limitations
 
-### Techniques
-- Dépendance aux APIs publiques (rate limiting)
-- Nomenclature taxonomique non standardisée
-- Qualité variable des données NCBI
+- Les requêtes NCBI sont soumises au rate limiting de l'API (une clé API augmente le quota)
+- Les séquences NCBI ne sont pas spécifiques au Québec; le filtrage géographique ne s'applique qu'aux enregistrements avec coordonnées
+- Biais taxonomiques importants: vertébrés et arthropodes mieux représentés que les champignons, invertébrés, et microorganismes
+- La nomenclature taxonomique entre BDQC, NCBI et BOLD n'est pas toujours concordante
 
-### Biologiques
-- Biais taxonomiques (vertébrés sur-représentés)
-- Données mondiales (pas spécifiques au Québec)
-- Certains groupes peu séquencés (fungi, invertébrés)
+Voir [APPROCHE.md](APPROCHE.md) pour la justification méthodologique détaillée.
 
-Voir [APPROCHE.md](APPROCHE.md) pour plus de détails.
+## Auteurs
 
-## Contribution
-
-### Auteurs
 - Steve Vissault
 - Marie Pier Brochu
 - Valérie Langlois
 
-### Citation
+## Citation
 
 ```
 Vissault, S., Brochu, M.P., & Langlois, V. (2025).
@@ -228,17 +174,9 @@ Portrait génomique du Québec: Cartographie de la disponibilité
 des données génomiques pour les espèces observées au Québec.
 ```
 
-## Licence
-
-À définir
-
-## Contact
-
-Pour questions ou suggestions, créer une issue sur le dépôt GitHub.
-
 ## Références
 
 - NCBI: https://www.ncbi.nlm.nih.gov/
-- BOLD Systems: http://www.boldsystems.org/
+- BOLD Systems: https://boldsystems.org/
 - Biodiversité Québec: https://biodiversite-quebec.ca/
-- Quarto: https://quarto.org/
+- CanVec: https://open.canada.ca/data/en/dataset/306e5004-534b-4110-9feb-58e3a5c3fd97
