@@ -40,8 +40,7 @@ deficient_queries <- list()
 high_id_queries <- list()
 
 ncbi_results <- map_df(seq_along(queries), \(i) {
-  q <- queries[i]
-  q <- "Abagrotis alternata"
+  q <- queries[14010]
   log_info("Query {i}/{length(queries)}: {q}")
 
   # Wrap entire query process in tryCatch

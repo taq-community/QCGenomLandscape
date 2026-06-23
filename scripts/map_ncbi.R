@@ -29,10 +29,11 @@ ncbi_sf <- ncbi_sf |> dplyr::mutate(
   in_qc = lengths(sf::st_within(geometry, qc)) > 0
 )
 
+mapview::mapview(ncbi_sf)
 mapview::mapview(ncbi_sf |> dplyr::filter(in_ca | in_qc))
 
 # Create hexagon grid at 10km resolution for Canada
-ncbi_ca <- ncbi_sf |> dplyr::filter(in_ca)
+ncbi_ca <- ncbi_sf |> dplyr::filter(in_qc)
 
 # Transform to a projected CRS for accurate distance calculations (Canada Lambert Conformal Conic)
 ncbi_ca_proj <- sf::st_transform(ncbi_ca, 3347)
@@ -41,7 +42,7 @@ can_proj <- sf::st_transform(can, 3347)
 # Create hexagonal grid over Canada (10km = 10000m cell size)
 hex_grid <- sf::st_make_grid(
   can_proj,
-  cellsize = 10000,
+  cellsize = 50000,
   square = FALSE
 ) |>
   sf::st_as_sf() |>
@@ -51,7 +52,8 @@ hex_grid <- sf::st_make_grid(
 hex_grid$n_records <- lengths(sf::st_intersects(hex_grid, ncbi_ca_proj))
 
 # Filter to hexagons with at least one record
-hex_with_data <- hex_grid |> dplyr::filter(n_records > 0)
+hex_with_data <- hex_grid |>
+  dplyr::filter(n_records > 0) 
 
 # Transform back to WGS84 for mapping
 hex_with_data <- sf::st_transform(hex_with_data, 4326)

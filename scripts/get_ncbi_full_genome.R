@@ -10,7 +10,7 @@ if (!dir.exists(log_dir)) {
   dir.create(log_dir, recursive = TRUE)
 }
 
-log_file <- file.path(log_dir, sprintf("ncbi_genome_queries_%s.log", format(Sys.time(), "%Y%m%d_%H%M%S")))
+log_file <- file.path(log_dir, sprintf("ncbi_full_genome_queries_%s.log", format(Sys.time(), "%Y%m%d_%H%M%S")))
 log_appender(appender_file(log_file))
 log_threshold(INFO)
 
@@ -64,9 +64,6 @@ query_full_genome <- function(species_name, query_index, total_queries) {
       log_info("  No nuclear genome found")
     }
 
-    # Small delay to respect API rate limits
-    Sys.sleep(0.34)
-
     # Query for mitochondrial genomes
     mito_query <- paste0(species_name, "[Organism] AND (complete genome[Title] OR complete sequence[Title]) AND (mitochondrion[Title] OR mitochondrial[Title])")
     log_info("  Mitochondrial query: {mito_query}")
@@ -74,7 +71,7 @@ query_full_genome <- function(species_name, query_index, total_queries) {
     mito_results <- rentrez::entrez_search(
       db = "nucleotide",
       term = mito_query,
-      retmax = 100
+      retmax = 99000
     )
 
     if (mito_results$count > 0) {

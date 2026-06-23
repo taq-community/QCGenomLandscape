@@ -41,7 +41,6 @@ high_id_queries <- list()
 
 ncbi_results <- map_df(seq_along(queries), \(i) {
   q <- queries[i]
-  q <- "Abagrotis alternata"
   log_info("Query {i}/{length(queries)}: {q}")
 
   # Wrap entire query process in tryCatch
@@ -205,8 +204,46 @@ ncbi_results <- map_df(seq_along(queries), \(i) {
   )
 }, .progress = TRUE) |> filter(!if_all(everything(), is.na)) 
 
-saveRDS(ncbi_results, "results/ncbi_results.rds")
-saveRDS(deficient_queries, "results/deficient_queries.rds")
-saveRDS(high_id_queries, "results/high_id_queries.rds")
+saveRDS(ncbi_results, "results/ncbi_non_voucher_results.rds")
+saveRDS(deficient_queries, "results/deficient_queries_non_voucher_results.rds")
+saveRDS(high_id_queries, "results/high_id_queries_non_voucher_results.rds")
 
 log_success("Completed! Retrieved {nrow(ncbi_results)} total sequences")
+
+### Get species with ids superior to 500
+ncbi_results <- readRDS("results/ncbi_non_voucher_results.rds")
+
+ncbi_results |>
+  dplyr::group_by(organism) |>
+  dplyr::count() |>
+  dplyr::filter(n >= 5000)
+
+ncbi_results <- ncbi_results |>
+  dplyr::mutate(
+    parsed_coords = purrr::map(lat_lon, parse_latlon),
+    latitude = purrr::map_dbl(parsed_coords, "lat"),
+    longitude = purrr::map_dbl(parsed_coords, "lon")
+  ) |>
+  dplyr::select(-parsed_coords)
+
+ncbi_sf <- sf::st_as_sf(
+  dplyr::filter(ncbi_results, !is.na(latitude) & !is.na(longitude)),
+  coords = c("longitude", "latitude"),
+  crs = 4326
+)
+
+# From https://open.canada.ca/data/en/dataset/306e5004-534b-4110-9feb-58e3a5c3fd97
+qc <- sf::read_sf("data/canvec_1M_CA_Admin.gdb", layer = "geo_political_region_2") |>
+  dplyr::filter(jurisdiction == 102) |>
+  sf::st_transform(4326)
+
+can <- sf::read_sf("data/canvec_1M_CA_Admin.gdb", layer = "geo_political_region_2") |>
+  dplyr::filter(country == 140) |>
+  sf::st_transform(4326)
+
+ncbi_sf <- ncbi_sf |> dplyr::mutate(
+  in_ca = lengths(sf::st_within(geometry, can)) > 0,
+  in_qc = lengths(sf::st_within(geometry, qc)) > 0
+)
+
+mapview::mapview(ncbi_sf |> dplyr::filter(in_qc))
