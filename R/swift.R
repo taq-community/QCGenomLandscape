@@ -56,9 +56,13 @@ swift_auth <- function(auth_url = Sys.getenv("SWIFT_AUTH_URL", "https://identity
   auth_url <- sub("/+$", "", auth_url)
   body <- build_swift_auth_body(app_cred_id, app_cred_secret)
 
+  logger::log_info("Authenticating against Keystone ({auth_url})...")
+
   resp <- request_fn(paste0(auth_url, "/v3/auth/tokens")) |>
     httr2::req_body_json(body) |>
     httr2::req_perform()
+
+  logger::log_success("Keystone auth OK")
 
   httr2::resp_header(resp, "X-Subject-Token")
 }
@@ -87,12 +91,25 @@ upload_to_swift <- function(path,
                              token = swift_auth(),
                              request_fn = httr2::request) {
   url <- paste(storage_url, container, object_name, sep = "/")
+  object_size <- file.info(path)$size
 
-  request_fn(url) |>
-    httr2::req_method("PUT") |>
-    httr2::req_headers(`X-Auth-Token` = token) |>
-    httr2::req_body_file(path) |>
-    httr2::req_perform()
+  logger::log_info("Uploading {path} ({format(object_size, big.mark = ',')} bytes) -> {container}/{object_name}")
+
+  tryCatch(
+    {
+      request_fn(url) |>
+        httr2::req_method("PUT") |>
+        httr2::req_headers(`X-Auth-Token` = token) |>
+        httr2::req_body_file(path) |>
+        httr2::req_perform()
+    },
+    error = function(e) {
+      logger::log_error("Swift upload failed for {object_name}: {e$message}")
+      stop(e)
+    }
+  )
+
+  logger::log_success("Uploaded {container}/{object_name}")
 
   invisible(paste(container, object_name, sep = "/"))
 }

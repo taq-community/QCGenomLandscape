@@ -2,20 +2,40 @@
 % Please edit documentation in R/ncbi_genome.R
 \name{fetch_ncbi_genomes}
 \alias{fetch_ncbi_genomes}
-\title{Query full-genome availability for a vector of species}
+\title{Query full-genome availability for a vector of species, batched}
 \usage{
-fetch_ncbi_genomes(species, progress = TRUE, ...)
+fetch_ncbi_genomes(
+  species,
+  batch_size = 25,
+  search_fn = rentrez::entrez_search,
+  summary_fn = rentrez::entrez_summary,
+  progress = TRUE
+)
 }
 \arguments{
-\item{species}{Character vector of species names}
+\item{species}{Character vector of species names (deduplicated internally)}
+
+\item{batch_size}{Integer, species OR'd together per query, default 25.
+Keep well under NCBI's query-length limits.}
+
+\item{search_fn}{Function with signature \verb{(db, term, retmax)}, default
+\code{\link[rentrez:entrez_search]{rentrez::entrez_search()}}; injectable for testing without network access}
+
+\item{summary_fn}{Function with signature \verb{(db, id)}, default
+\code{\link[rentrez:entrez_summary]{rentrez::entrez_summary()}}}
 
 \item{progress}{Logical, show a progress bar, default \code{TRUE}}
-
-\item{...}{Passed through to \code{\link[=query_full_genome]{query_full_genome()}} (e.g. \code{search_fn} for testing)}
 }
 \value{
-Tibble, one row per species (see \code{\link[=query_full_genome]{query_full_genome()}})
+Tibble, one row per species: \code{species}, \code{nuclear_genome},
+\code{mitochondrial_genome}, \code{nuclear_count}, \code{mitochondrial_count},
+\code{nuclear_accessions}, \code{mitochondrial_accessions}, \code{error}
 }
 \description{
-Query full-genome availability for a vector of species
+Splits \code{species} into batches of \code{batch_size} and resolves nuclear and
+mitochondrial genome availability independently per batch -- see
+\code{resolve_nuclear_genomes()} and \code{resolve_mitochondrial_genomes()} for why
+they use different strategies (nuclear hits are rare enough for a fast
+existence-check path to pay off; mitochondrial hits are not, so that
+dimension goes straight to a batched search + summary attribution).
 }

@@ -42,10 +42,8 @@ build_ncbi_queries <- function(species_df, query_primers, voucher = TRUE, batch_
   joined |>
     dplyr::group_by(query_marker) |>
     dplyr::group_map(function(rows, key) {
-      species_batches <- split(rows$species, ceiling(seq_along(rows$species) / batch_size))
-      purrr::map_chr(species_batches, function(sp) {
-        organism_clause <- paste(paste0(sp, "[Organism]"), collapse = " OR ")
-        as.character(glue::glue("({organism_clause}) AND {key$query_marker}{suffix}"))
+      purrr::map_chr(chunk_species(rows$species, batch_size), function(sp) {
+        as.character(glue::glue("{build_organism_clause(sp)} AND {key$query_marker}{suffix}"))
       })
     }) |>
     unlist() |>

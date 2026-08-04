@@ -1,5 +1,10 @@
 # QCGenomLandscape
 
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/taq-community/QCGenomLandscape/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/taq-community/QCGenomLandscape/actions/workflows/R-CMD-check.yaml)
+[![pkgdown](https://github.com/taq-community/QCGenomLandscape/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/taq-community/QCGenomLandscape/actions/workflows/pkgdown.yaml)
+<!-- badges: end -->
+
 Cartographie de la disponibilité des données génomiques pour les espèces documentées au Québec. Le package interroge les bases de données NCBI et BOLD Systems afin d'établir un portrait de la couverture génomique des espèces de la liste BDQC, avec un focus sur les marqueurs moléculaires (COI, cytb, gènes mitochondriaux) et les espèces à statut de conservation.
 
 ## Vue d'ensemble

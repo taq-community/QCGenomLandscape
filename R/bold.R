@@ -12,11 +12,14 @@ fetch_bold_sequences <- function(query = "geo:province/state:Quebec",
                                   extent = "full",
                                   out_path = NULL,
                                   request_fn = httr2::request) {
+  logger::log_info("BOLD query: {query}")
+
   query_request <- request_fn("https://portal.boldsystems.org/api/query") |>
     httr2::req_url_query(query = query, extent = extent) |>
     httr2::req_perform()
 
   query_id <- httr2::resp_body_json(query_request)$query_id
+  logger::log_info("BOLD query_id {query_id} -- downloading TSV...")
 
   download_request <- request_fn(
     glue::glue("https://portal.boldsystems.org/api/documents/{query_id}/download")
@@ -25,9 +28,11 @@ fetch_bold_sequences <- function(query = "geo:province/state:Quebec",
     httr2::req_perform()
 
   bold_data <- httr2::resp_body_string(download_request)
+  logger::log_success("BOLD download complete ({format(nchar(bold_data), big.mark = ',')} characters)")
 
   if (!is.null(out_path)) {
     writeLines(bold_data, out_path)
+    logger::log_info("BOLD data written to {out_path}")
   }
 
   invisible(bold_data)

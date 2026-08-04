@@ -11,8 +11,9 @@ NULL
 # statically.
 utils::globalVariables(c(
   "ESPECE", "GENRE", "Nom.scientifique", "STATUT_LEMV", "Statut.selon.le.COSEPAC",
-  "accession", "gene", "gene_group", "group", "group_en", "groupe", "has_data",
-  "n_seq", "n_sp", "n_sp_with_data", "n_species", "n_total", "n_total_seq", "organism",
-  "pct", "query", "query_marker", "species", "status", "statut_canada", "statut_quebec",
-  "total", "vernacular_en", "vernacular_fr"
+  "accession", "gene", "gene_group", "group", "group_en", "groupe", "has_data", "id",
+  "mitochondrial_count", "mitochondrial_genome", "n_seq", "n_sp", "n_sp_with_data",
+  "n_species", "n_total", "n_total_seq", "organism", "pct", "query", "query_marker",
+  "species", "status", "statut_canada", "statut_quebec", "total", "vernacular_en",
+  "vernacular_fr"
 ))
