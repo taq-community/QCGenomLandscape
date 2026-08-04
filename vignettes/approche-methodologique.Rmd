@@ -1,0 +1,109 @@
+---
+title: "Approche méthodologique"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Approche méthodologique}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+```{r setup}
+library(QCGenomLandscape)
+```
+
+## Objectif
+
+Établir un portrait de la disponibilité des données génomiques pour les espèces observées au Québec (liste BDQC, ~24 800 espèces), en interrogeant BOLD Systems et NCBI, puis en croisant les résultats avec les statuts de conservation (COSEPAC/LEMV).
+
+## Sources de données
+
+| Source | Contenu | Fichier / accès |
+|---|---|---|
+| BDQC | Liste taxonomique des espèces observées au Québec | `data/bdqc_list_01122025.csv` |
+| COSEPAC (Canada) | Statuts de conservation fédéraux | `data/CA_especes_en_peril.csv` |
+| LEMV (Québec) | Statuts de conservation provinciaux | `data/QC_especes_en_peril.csv` |
+| Amorces (Keck 2022) | Correspondance marqueurs × groupes taxonomiques | `data/primers_map_group_bdqc_list_01122025.csv` |
+| CanVec 1M | Limites administratives Canada/Québec | `data/canvec_1M_CA_Admin.gdb` |
+| BOLD Systems | Barcodes ADN (principalement COI), géoréférencés | API REST |
+| NCBI nucleotide/genome | Séquences et génomes assemblés | `rentrez` |
+
+## Pipeline
+
+Le pipeline est orchestré avec [`targets`](https://books.ropensci.org/targets/) (`_targets.R`, à la racine du dépôt) : chaque étape est une fonction exportée du package, mise en cache par `targets` (une étape n'est ré-exécutée que si son code ou ses entrées ont changé — utile puisque plusieurs étapes sont des appels API lents et soumis au rate limiting).
+
+```{r pipeline-overview}
+# Aperçu du graphe de dépendances, sans rien exécuter
+targets::tar_visnetwork()
+
+# Exécute (ou reprend) le pipeline au complet
+targets::tar_make()
+```
+
+### 1. BOLD Systems
+
+`fetch_bold_sequences()` interroge le portail BOLD pour les enregistrements géoréférencés au Québec et retourne le TSV brut.
+
+### 2. NCBI — séquences (avec et sans voucher)
+
+`build_ncbi_queries()` construit, pour chaque espèce × marqueur (table de correspondance `primers_map_group_bdqc_list_01122025.csv`), une requête Entrez — avec (`voucher = TRUE`) ou sans (`voucher = FALSE`) le filtre `voucher[Title]`. `fetch_ncbi_sequences()` exécute ensuite ces requêtes par lots, avec gestion d'erreur et repli sur `deficient_queries`/`high_id_queries` pour les requêtes problématiques ou à fort volume (>500 résultats).
+
+### 3. NCBI — génomes complets
+
+`fetch_ncbi_genomes()` (qui appelle `query_full_genome()` par espèce) interroge les bases `genome` (génomes nucléaires) et `nucleotide` (génomes mitochondriaux complets) pour chaque espèce de la liste BDQC.
+
+### 4. Annotations géniques et classification
+
+`fetch_gene_annotations()` récupère les annotations de gènes (XML GenBank) pour un sous-échantillon d'accessions par espèce. `assign_gene_group()` classe chaque gène en marqueur standardisé (COI, Cytb, ND1/2/4/5, 12S/16S rRNA, ITS, marqueurs photosynthétiques). `classify_taxon_group()` affine les groupes taxonomiques BDQC (ex. mammifères marins vs. terrestres, insectes vs. crustacés).
+
+### 5. Statuts de conservation
+
+`load_risk_status()` normalise les statuts COSEPAC (Canada) et LEMV (Québec), en conservant le statut le plus sévère par espèce, avec un mode `translate = TRUE` optionnel pour les libellés anglais.
+
+### 6. Contrôle qualité des séquences
+
+`fetch_gb_records()` et `parse_gb_records()` récupèrent et analysent les enregistrements GenBank complets ; `score_sequence_quality()` calcule des métriques simples (longueur, %N, %GC) et `has_stop_codon_coi()` signale les séquences COI avec un codon stop en phase (code mitochondrial invertébré), une anomalie typique d'une séquence mal orientée ou d'un pseudogène.
+
+### 7. Table récapitulative et figures
+
+`build_summary_dataframe()` assemble un tableau par espèce (séquences NCBI, marqueurs disponibles, taxonomie, statuts de conservation). `plot_gene_prevalence()` et `plot_risk_status_coverage()` produisent les figures de couverture.
+
+### 8. Export vers Arbutus (Swift)
+
+Chaque livrable est optionnellement copié vers le conteneur Arbutus (Alliance de recherche numérique du Canada) via `upload_to_swift()`, authentifié via `swift_auth()` (Keystone). Si les variables `SWIFT_*` ne sont pas configurées, cette étape est simplement ignorée (avec un avertissement) — le reste du pipeline s'exécute normalement.
+
+## Sorties principales
+
+| Fichier | Description |
+|---|---|
+| `results/bold_qc_data.tsv` | Données BOLD brutes pour le Québec |
+| `results/ncbi_results.rds` | Séquences NCBI avec voucher |
+| `results/ncbi_non_voucher_results.rds` | Séquences NCBI sans filtre voucher |
+| `results/ncbi_genome_results.rds` | Génomes complets (nucléaires/mitochondriaux) par espèce |
+| `results/genes_subsamp_50_df.rds` | Annotations géniques (sous-échantillon) |
+| `results/sequence_qc.rds` | Métriques de qualité de séquence + détection de codons stop |
+| `results/genes_prevalence.svg` | Prévalence des marqueurs géniques par groupe taxonomique |
+| `results/risk_status_coverage.svg` | Couverture génomique par statut de conservation (Québec) |
+
+## Limitations
+
+- **Rate limiting** : NCBI (~3 requêtes/s, 10/s avec clé API), BOLD (pas de limite stricte documentée mais délai recommandé).
+- **Exactitude taxonomique** : dépend de la nomenclature utilisée par chaque base ; certaines espèces ont plusieurs noms ou synonymes non résolus.
+- **Qualité des données** : NCBI accepte des soumissions publiques de qualité variable ; BOLD est plus standardisé mais moins diversifié taxonomiquement.
+- **Biais taxonomiques** : vertébrés et plantes sur-représentés ; insectes et araignées dominent chez les arthropodes ; champignons et bactéries sous-représentés.
+- **Biais géographiques** : les séquences NCBI ne sont pas spécifiques au Québec ; le filtrage géographique ne s'applique qu'aux enregistrements avec coordonnées.
+
+## Références
+
+- NCBI : <https://www.ncbi.nlm.nih.gov/>
+- BOLD Systems : <https://boldsystems.org/>
+- Biodiversité Québec : <https://biodiversite-quebec.ca/>
+- CanVec : <https://open.canada.ca/data/en/dataset/306e5004-534b-4110-9feb-58e3a5c3fd97>
+- `targets` : <https://books.ropensci.org/targets/>
