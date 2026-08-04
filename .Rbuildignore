@@ -1,0 +1,12 @@
+^LICENSE\.md$
+^\.git$
+^data$
+^results$
+^logs$
+^_targets$
+^_targets\.R$
+^exploration$
+^internal$
+^APPROCHE\.md$
+^\.Renviron$
+^scripts$

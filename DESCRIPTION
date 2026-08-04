@@ -1,0 +1,48 @@
+Package: QCGenomLandscape
+Title: Portrait of Genomic Data Availability for Quebec Species
+Version: 0.0.0.9000
+Authors@R: c(
+    person("Steve", "Vissault", , "svissault01@gmail.com", role = c("aut", "cre")),
+    person("Marie Pier", "Brochu", role = "aut"),
+    person("Valérie", "Langlois", role = "aut")
+    )
+Description: Tools to query BOLD Systems and NCBI for genomic sequence
+    availability across the species of the Biodiversite Quebec (BDQC)
+    species list, cross-reference conservation status (COSEPAC/LEMV), and
+    build summary tables and figures.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Language: en
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 8.0.0
+Depends:
+    R (>= 4.1)
+Imports:
+    Biostrings,
+    DECIPHER,
+    dplyr,
+    ggplot2,
+    glue,
+    httr2,
+    logger,
+    purrr,
+    rentrez,
+    rlang,
+    sf,
+    stats,
+    stringr,
+    tibble,
+    tidyr,
+    utils,
+    xml2
+Suggests:
+    knitr,
+    mapview,
+    rmarkdown,
+    tarchetypes,
+    targets,
+    testthat (>= 3.0.0),
+    withr
+Additional_repositories: https://bioconductor.org/packages/release/bioc
+Config/testthat/edition: 3
+VignetteBuilder: knitr

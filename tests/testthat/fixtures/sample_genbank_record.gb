@@ -1,0 +1,33 @@
+LOCUS       ABC123                   30 bp    DNA     linear   INV 01-JAN-2020
+DEFINITION  Test species mitochondrial COI gene, single gene tag.
+ACCESSION   ABC123
+VERSION     ABC123.1
+FEATURES             Location/Qualifiers
+     source          1..30
+     gene            1..30
+                     /gene="COI"
+     CDS             1..30
+                     /gene="COI"
+ORIGIN
+        1 acgtacgtac gtacgtacgt acgtacgtac
+//
+LOCUS       DEF456                   30 bp    DNA     linear   INV 01-JAN-2020
+DEFINITION  Test species with two distinct gene tags.
+ACCESSION   DEF456
+VERSION     DEF456.1
+FEATURES             Location/Qualifiers
+     gene            1..15
+                     /gene="COI"
+     gene            16..30
+                     /gene="Cytb"
+ORIGIN
+        1 acgtnnnnac gtacgtacgt acgtacgtac
+//
+LOCUS       GHI789                   0 bp    DNA     linear   INV 01-JAN-2020
+DEFINITION  Test species without a sequence (no ORIGIN block).
+ACCESSION   GHI789
+VERSION     GHI789.1
+FEATURES             Location/Qualifiers
+     gene            1..300
+                     /gene="16S"
+//

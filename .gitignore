@@ -21,3 +21,11 @@ results/
 # Site output
 _site/
 .Renviron
+
+# Package development
+*.Rcheck/
+*.tar.gz
+inst/doc
+
+# targets pipeline store
+_targets/
