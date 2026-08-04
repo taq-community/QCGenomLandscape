@@ -34,6 +34,18 @@ build_summary_dataframe <- function(ncbi_results, genes_df, bdqc_taxo, ca_risk, 
   total_seq <- ncbi_results |>
     dplyr::count(species, name = "n_total_seq")
 
+  # Column names in c() are quoted strings, not backtick symbols, so \uxxxx
+  # escapes work here -- keeps this source file ASCII-only per R CMD check.
+  display_names <- c(
+    "Nom scientifique" = "species",
+    "Nom commun FR" = "vernacular_fr",
+    "Nom commun EN" = "vernacular_en",
+    "Groupe taxonomique" = "group_en",
+    "Statut de l'esp\u00e8ce au Canada" = "statut_canada",
+    "Statut de l'esp\u00e8ce au Qu\u00e9bec" = "statut_quebec",
+    "S\u00e9quences totales (NCBI)" = "n_total_seq"
+  )
+
   ncbi_results |>
     dplyr::distinct(species) |>
     dplyr::filter(!is.na(species)) |>
@@ -43,19 +55,15 @@ build_summary_dataframe <- function(ncbi_results, genes_df, bdqc_taxo, ca_risk, 
     dplyr::left_join(total_seq, by = "species") |>
     dplyr::left_join(gene_counts, by = "species") |>
     dplyr::select(
-      `Nom scientifique` = species,
-      `Nom commun FR` = vernacular_fr,
-      `Nom commun EN` = vernacular_en,
-      `Groupe taxonomique` = group_en,
-      `Statut de l'espèce au Canada` = statut_canada,
-      `Statut de l'espèce au Québec` = statut_quebec,
-      `Séquences totales (NCBI)` = n_total_seq,
+      species, vernacular_fr, vernacular_en, group_en,
+      statut_canada, statut_quebec, n_total_seq,
       dplyr::any_of(c(
         "COI", "Cytb", "ND1", "ND2", "ND4", "ND5",
         "12S rRNA", "16S rRNA", "Nuclear rRNA / ITS",
         "Photosynthesis-related (rbcL, matK, etc.)"
       ))
-    )
+    ) |>
+    dplyr::rename(!!!display_names)
 }
 
 #' Build the per-species genomic-data summary table, reading inputs from disk

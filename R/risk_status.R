@@ -28,7 +28,7 @@ load_risk_status <- function(path, jurisdiction = c("CA", "QC"), translate = FAL
         species = paste(GENRE, ESPECE),
         status = STATUT_LEMV
       ) |>
-      dplyr::filter(status != "Retirée" & status != "Non suivie")
+      dplyr::filter(status != "Retir\u00e9e" & status != "Non suivie")
   }
 
   risk <- risk |>
@@ -41,14 +41,14 @@ load_risk_status <- function(path, jurisdiction = c("CA", "QC"), translate = FAL
       dplyr::mutate(status = dplyr::recode(status,
         "Disparue" = "Extinct",
         "Disparue du pays" = "Extirpated",
-        "Données insuffisantes" = "Data deficient",
+        "Donn\u00e9es insuffisantes" = "Data deficient",
         "En voie de disparition" = "Endangered",
-        "Menacée" = "Threatened",
-        "Non en péril" = "Not at risk",
-        "Préoccupante" = "Special concern",
+        "Menac\u00e9e" = "Threatened",
+        "Non en p\u00e9ril" = "Not at risk",
+        "Pr\u00e9occupante" = "Special concern",
         "Candidate" = "Candidate",
         "Susceptible" = "Likely to be designated",
-        "Vulnérable" = "Vulnerable"
+        "Vuln\u00e9rable" = "Vulnerable"
       ))
   }
 
