@@ -1,9 +1,12 @@
 test_that("build_summary_dataframe joins sequence counts, gene markers, taxonomy, and risk status", {
   ncbi_results <- tibble::tibble(
+    # a batched query (multiple species OR'd together) -- species must come
+    # from `organism`, not be parsed out of `query`
     query = c(
-      "Alces alces[Organism] AND COI[Gene] AND voucher[Title]",
-      "Alces alces[Organism] AND COI[Gene] AND voucher[Title]"
+      "(Alces alces[Organism] OR Ursus americanus[Organism]) AND COI[Gene] AND voucher[Title]",
+      "(Alces alces[Organism] OR Ursus americanus[Organism]) AND COI[Gene] AND voucher[Title]"
     ),
+    organism = c("Alces alces", "Alces alces"),
     accession = c("ACC1", "ACC2")
   )
   genes_df <- tibble::tibble(
@@ -31,8 +34,8 @@ test_that("build_summary_dataframe joins sequence counts, gene markers, taxonomy
   expect_true(is.na(result$`Statut de l'espèce au Québec`))
 })
 
-test_that("build_summary_dataframe drops rows with an unparseable species", {
-  ncbi_results <- tibble::tibble(query = character(0), accession = character(0))
+test_that("build_summary_dataframe drops rows with no species (empty input)", {
+  ncbi_results <- tibble::tibble(query = character(0), organism = character(0), accession = character(0))
   genes_df <- tibble::tibble(accession = character(0), gene = character(0))
   bdqc_taxo <- tibble::tibble(
     species = character(0), vernacular_fr = character(0),

@@ -8,7 +8,7 @@ build_summary_dataframe(ncbi_results, genes_df, bdqc_taxo, ca_risk, qc_risk)
 }
 \arguments{
 \item{ncbi_results}{Tibble as returned by \code{fetch_ncbi_sequences()$results}
-(must have \code{query}, \code{accession} columns)}
+(must have \code{organism}, \code{accession} columns)}
 
 \item{genes_df}{Tibble as returned by \code{\link[=fetch_gene_annotations]{fetch_gene_annotations()}} (must
 have \code{accession}, \code{gene} columns)}

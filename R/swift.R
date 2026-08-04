@@ -1,28 +1,26 @@
-#' Build the Keystone v3 password/project-scoped auth request body
+#' Build the Keystone v3 application-credential auth request body
 #'
 #' Pure helper factored out of [swift_auth()] so the request body can be
 #' unit tested without performing any network call.
 #'
-#' @param username,password,project_name,domain Character scalars
+#' Application-credential auth needs no username/password/project/domain --
+#' the credential ID already uniquely identifies the user and is pre-scoped
+#' to a project when created. This is also what makes it work with MFA-
+#' protected accounts: the credential is generated once (interactively,
+#' after an MFA challenge) via the Horizon dashboard or CLI, and from then on
+#' authenticates on its own.
+#'
+#' @param app_cred_id,app_cred_secret Character scalars
 #' @return A list, ready to be passed to [httr2::req_body_json()]
 #' @noRd
-build_swift_auth_body <- function(username, password, project_name, domain) {
+build_swift_auth_body <- function(app_cred_id, app_cred_secret) {
   list(
     auth = list(
       identity = list(
-        methods = list("password"),
-        password = list(
-          user = list(
-            name = username,
-            domain = list(name = domain),
-            password = password
-          )
-        )
-      ),
-      scope = list(
-        project = list(
-          name = project_name,
-          domain = list(name = domain)
+        methods = list("application_credential"),
+        application_credential = list(
+          id = app_cred_id,
+          secret = app_cred_secret
         )
       )
     )
@@ -31,28 +29,32 @@ build_swift_auth_body <- function(username, password, project_name, domain) {
 
 #' Authenticate against an OpenStack Keystone endpoint
 #'
-#' Performs a Keystone v3 password/project-scoped auth (used by Alliance
+#' Performs a Keystone v3 application-credential auth (used by Alliance
 #' Canada's Arbutus object storage, among other OpenStack Swift deployments)
-#' and returns the resulting token.
+#' and returns the resulting token. Application credentials -- not username/
+#' password -- because Arbutus accounts protected by MFA can't authenticate
+#' with a plain password over the API; an application credential is
+#' generated once interactively (Horizon dashboard: Identity > Application
+#' Credentials, or `openstack application credential create <name>` after an
+#' interactive/MFA login) and used from then on.
 #'
-#' @param auth_url Character, Keystone auth URL (no trailing `/v3/...`),
-#'   default `Sys.getenv("SWIFT_AUTH_URL")`
-#' @param username,password,project_name Character, default from
-#'   `SWIFT_USERNAME`/`SWIFT_PASSWORD`/`SWIFT_PROJECT_NAME` env vars
-#' @param domain Character, Keystone domain, default `SWIFT_DOMAIN` env var
-#'   or `"default"`
+#' @param auth_url Character, Keystone auth URL (trailing slash tolerated),
+#'   default `SWIFT_AUTH_URL` env var or Arbutus's identity endpoint (not
+#'   secret -- specific to this project, but fine to override for another one)
+#' @param app_cred_id,app_cred_secret Character, default `SWIFT_APP_CRED_ID`/
+#'   `SWIFT_APP_CRED_SECRET` env vars (no default -- these are secret and
+#'   must be set)
 #' @param request_fn Function with signature `(url)` returning an `httr2`
 #'   request, default [httr2::request()]
 #' @return Character scalar, the Keystone auth token (from the
 #'   `X-Subject-Token` response header)
 #' @export
-swift_auth <- function(auth_url = Sys.getenv("SWIFT_AUTH_URL"),
-                        username = Sys.getenv("SWIFT_USERNAME"),
-                        password = Sys.getenv("SWIFT_PASSWORD"),
-                        project_name = Sys.getenv("SWIFT_PROJECT_NAME"),
-                        domain = Sys.getenv("SWIFT_DOMAIN", "default"),
+swift_auth <- function(auth_url = Sys.getenv("SWIFT_AUTH_URL", "https://identity.arbutus.alliancecan.ca"),
+                        app_cred_id = Sys.getenv("SWIFT_APP_CRED_ID"),
+                        app_cred_secret = Sys.getenv("SWIFT_APP_CRED_SECRET"),
                         request_fn = httr2::request) {
-  body <- build_swift_auth_body(username, password, project_name, domain)
+  auth_url <- sub("/+$", "", auth_url)
+  body <- build_swift_auth_body(app_cred_id, app_cred_secret)
 
   resp <- request_fn(paste0(auth_url, "/v3/auth/tokens")) |>
     httr2::req_body_json(body) |>

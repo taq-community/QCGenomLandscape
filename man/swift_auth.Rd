@@ -5,23 +5,20 @@
 \title{Authenticate against an OpenStack Keystone endpoint}
 \usage{
 swift_auth(
-  auth_url = Sys.getenv("SWIFT_AUTH_URL"),
-  username = Sys.getenv("SWIFT_USERNAME"),
-  password = Sys.getenv("SWIFT_PASSWORD"),
-  project_name = Sys.getenv("SWIFT_PROJECT_NAME"),
-  domain = Sys.getenv("SWIFT_DOMAIN", "default"),
+  auth_url = Sys.getenv("SWIFT_AUTH_URL", "https://identity.arbutus.alliancecan.ca"),
+  app_cred_id = Sys.getenv("SWIFT_APP_CRED_ID"),
+  app_cred_secret = Sys.getenv("SWIFT_APP_CRED_SECRET"),
   request_fn = httr2::request
 )
 }
 \arguments{
-\item{auth_url}{Character, Keystone auth URL (no trailing \verb{/v3/...}),
-default \code{Sys.getenv("SWIFT_AUTH_URL")}}
+\item{auth_url}{Character, Keystone auth URL (trailing slash tolerated),
+default \code{SWIFT_AUTH_URL} env var or Arbutus's identity endpoint (not
+secret -- specific to this project, but fine to override for another one)}
 
-\item{username, password, project_name}{Character, default from
-\code{SWIFT_USERNAME}/\code{SWIFT_PASSWORD}/\code{SWIFT_PROJECT_NAME} env vars}
-
-\item{domain}{Character, Keystone domain, default \code{SWIFT_DOMAIN} env var
-or \code{"default"}}
+\item{app_cred_id, app_cred_secret}{Character, default \code{SWIFT_APP_CRED_ID}/
+\code{SWIFT_APP_CRED_SECRET} env vars (no default -- these are secret and
+must be set)}
 
 \item{request_fn}{Function with signature \code{(url)} returning an \code{httr2}
 request, default \code{\link[httr2:request]{httr2::request()}}}
@@ -31,7 +28,12 @@ Character scalar, the Keystone auth token (from the
 \code{X-Subject-Token} response header)
 }
 \description{
-Performs a Keystone v3 password/project-scoped auth (used by Alliance
+Performs a Keystone v3 application-credential auth (used by Alliance
 Canada's Arbutus object storage, among other OpenStack Swift deployments)
-and returns the resulting token.
+and returns the resulting token. Application credentials -- not username/
+password -- because Arbutus accounts protected by MFA can't authenticate
+with a plain password over the API; an application credential is
+generated once interactively (Horizon dashboard: Identity > Application
+Credentials, or \verb{openstack application credential create <name>} after an
+interactive/MFA login) and used from then on.
 }

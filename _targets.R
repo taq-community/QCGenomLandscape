@@ -19,13 +19,16 @@ logger::log_threshold(logger::INFO)
 rentrez::set_entrez_key(Sys.getenv("NCBI_API_KEY"))
 
 # ---- Swift export helpers --------------------------------------------------
-# Uploads are skipped (with a warning, not an error) if SWIFT_* env vars
-# aren't set, so the pipeline still runs end-to-end without Swift configured.
+# Uploads are skipped (with a warning, not an error) if SWIFT_APP_CRED_ID/
+# SWIFT_APP_CRED_SECRET aren't set, so the pipeline still runs end-to-end
+# without Swift configured. Application credentials, not username/password,
+# because Arbutus accounts with MFA can't authenticate with a plain password
+# over the API -- see ?swift_auth for how to generate one.
 
 get_swift_token <- function() {
-  required <- c("SWIFT_AUTH_URL", "SWIFT_USERNAME", "SWIFT_PASSWORD", "SWIFT_PROJECT_NAME")
+  required <- c("SWIFT_APP_CRED_ID", "SWIFT_APP_CRED_SECRET")
   if (!all(nzchar(Sys.getenv(required)))) {
-    warning("SWIFT_* env vars not set -- Swift upload targets will be skipped", call. = FALSE)
+    warning("SWIFT_APP_CRED_ID/SWIFT_APP_CRED_SECRET not set -- Swift upload targets will be skipped", call. = FALSE)
     return(NULL)
   }
   swift_auth()
@@ -72,7 +75,13 @@ list(
   }, format = "file"),
 
   # ---- 2. NCBI sequences (voucher) ---------------------------------------
-  tar_target(ncbi_queries_voucher, QCGenomLandscape::build_ncbi_queries(bdqc_species, query_primers, voucher = TRUE)),
+  # batch_size batches species sharing a marker into one OR'd Entrez query --
+  # cuts total NCBI requests by roughly that factor. Species are recovered
+  # afterwards from the `organism` field NCBI returns, not by parsing `query`.
+  tar_target(
+    ncbi_queries_voucher,
+    QCGenomLandscape::build_ncbi_queries(bdqc_species, query_primers, voucher = TRUE, batch_size = 25)
+  ),
   tar_target(ncbi_voucher, QCGenomLandscape::fetch_ncbi_sequences(ncbi_queries_voucher)),
   tar_target(ncbi_results_saved, {
     saveRDS(ncbi_voucher$results, "results/ncbi_results.rds")
@@ -90,7 +99,7 @@ list(
   # ---- 3. NCBI sequences (non-voucher) + geo-filter ----------------------
   tar_target(
     ncbi_queries_non_voucher,
-    QCGenomLandscape::build_ncbi_queries(bdqc_species, query_primers, voucher = FALSE)
+    QCGenomLandscape::build_ncbi_queries(bdqc_species, query_primers, voucher = FALSE, batch_size = 25)
   ),
   tar_target(ncbi_non_voucher, QCGenomLandscape::fetch_ncbi_sequences(ncbi_queries_non_voucher)),
   tar_target(ncbi_non_voucher_results_saved, {
@@ -134,7 +143,7 @@ list(
   tar_target(gene_accessions, {
     set.seed(42)
     ncbi_voucher$results |>
-      dplyr::mutate(species = stringr::str_extract(query, "^\\w+\\s+\\w+")) |>
+      dplyr::mutate(species = organism) |>
       dplyr::group_by(species) |>
       dplyr::slice_sample(n = 5) |>
       dplyr::ungroup() |>
@@ -150,7 +159,7 @@ list(
     dplyr::mutate(gene_group = QCGenomLandscape::assign_gene_group(gene)) |>
     dplyr::left_join(
       ncbi_voucher$results |>
-        dplyr::mutate(species = stringr::str_extract(query, "^\\w+\\s+\\w+")) |>
+        dplyr::mutate(species = organism) |>
         dplyr::select(accession, species),
       by = "accession"
     ) |>

@@ -5,7 +5,7 @@
 #' row per species.
 #'
 #' @param ncbi_results Tibble as returned by `fetch_ncbi_sequences()$results`
-#'   (must have `query`, `accession` columns)
+#'   (must have `organism`, `accession` columns)
 #' @param genes_df Tibble as returned by [fetch_gene_annotations()] (must
 #'   have `accession`, `gene` columns)
 #' @param bdqc_taxo Tibble with columns `species`, `vernacular_fr`,
@@ -15,8 +15,12 @@
 #' @return Tibble, one row per species
 #' @export
 build_summary_dataframe <- function(ncbi_results, genes_df, bdqc_taxo, ca_risk, qc_risk) {
+  # `organism` is NCBI's own per-record taxon name -- more reliable than
+  # parsing it back out of `query`, and required once build_ncbi_queries()
+  # batches multiple species into one OR'd query (query no longer starts
+  # with a single species name in that case).
   ncbi_results <- ncbi_results |>
-    dplyr::mutate(species = stringr::str_extract(query, "^\\w+\\s+\\w+"))
+    dplyr::mutate(species = organism)
 
   gene_counts <- genes_df |>
     dplyr::mutate(gene_group = assign_gene_group(gene)) |>

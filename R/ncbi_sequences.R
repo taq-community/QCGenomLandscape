@@ -1,14 +1,25 @@
 #' Build NCBI search query strings from a BDQC species list and primer map
 #'
+#' With `batch_size > 1`, species sharing the same `query_marker` are
+#' combined into a single OR'd query (`"(Sp1[Organism] OR Sp2[Organism] OR
+#' ...) AND marker[Gene]"`), cutting the number of Entrez searches by
+#' roughly `batch_size`x. Species are no longer recoverable by parsing the
+#' query string in that case -- use the `organism` field NCBI returns in
+#' [fetch_ncbi_sequences()]'s results instead (already present in its output).
+#'
 #' @param species_df Data frame from the BDQC species list csv, already
 #'   filtered to `rank == "species"` (must have `species` and `group_en` columns)
 #' @param query_primers Data frame from the primers-map csv (must have
 #'   `group` and `query_marker` columns)
 #' @param voucher Logical; if `TRUE` (default), appends `AND voucher[Title]`
 #'   to each query so results are restricted to specimen-voucher-backed records
-#' @return Character vector of unique, non-`NA` Entrez query strings
+#' @param batch_size Integer, how many species (sharing the same marker) to
+#'   OR together per query, default 1 (one query per species, matching the
+#'   original per-species scripts). Keep this well under NCBI's query-length
+#'   limits -- 20-50 is a reasonable range in practice.
+#' @return Character vector of unique Entrez query strings
 #' @export
-build_ncbi_queries <- function(species_df, query_primers, voucher = TRUE) {
+build_ncbi_queries <- function(species_df, query_primers, voucher = TRUE, batch_size = 1) {
   suffix <- if (voucher) " AND voucher[Title]" else ""
 
   joined <- species_df |>
@@ -17,17 +28,27 @@ build_ncbi_queries <- function(species_df, query_primers, voucher = TRUE) {
       query_primers |> dplyr::mutate(group = tolower(group)),
       by = "group"
     ) |>
-    dplyr::mutate(
-      query = ifelse(
-        !is.na(query_marker),
-        glue::glue("{species}[Organism] AND {query_marker}{suffix}"),
-        NA
-      )
+    dplyr::filter(!is.na(query_marker)) |>
+    dplyr::distinct(species, query_marker)
+
+  if (batch_size <= 1) {
+    return(
+      glue::glue("{joined$species}[Organism] AND {joined$query_marker}{suffix}") |>
+        unique() |>
+        as.character()
     )
+  }
 
   joined |>
-    dplyr::pull(query) |>
-    stats::na.omit() |>
+    dplyr::group_by(query_marker) |>
+    dplyr::group_map(function(rows, key) {
+      species_batches <- split(rows$species, ceiling(seq_along(rows$species) / batch_size))
+      purrr::map_chr(species_batches, function(sp) {
+        organism_clause <- paste(paste0(sp, "[Organism]"), collapse = " OR ")
+        as.character(glue::glue("({organism_clause}) AND {key$query_marker}{suffix}"))
+      })
+    }) |>
+    unlist() |>
     unique() |>
     as.character()
 }
@@ -71,36 +92,13 @@ fetch_ncbi_sequences <- function(queries,
 
     tryCatch(
       {
-        count_result <- tryCatch(
-          search_fn(db = "nucleotide", term = q, retmax = 0),
-          error = function(e) {
-            logger::log_error("Error in initial search for query {i}: {e$message}")
-            deficient_queries[[length(deficient_queries) + 1]] <<- list(
-              query_index = i,
-              query = q,
-              error_type = "entrez_search_count",
-              error_message = e$message,
-              timestamp = Sys.time()
-            )
-            NULL
-          }
-        )
-
-        if (is.null(count_result)) {
-          return(tibble::tibble())
-        }
-
-        if (count_result$count == 0) {
-          logger::log_warn("No results found for query")
-          return(tibble::tibble())
-        }
-
-        logger::log_info("Found {count_result$count} total sequences, retrieving all IDs...")
-
+        # A single entrez_search(retmax = retmax) already returns both
+        # `count` and `ids` in one response -- no need for a separate
+        # retmax = 0 call just to read `count` first.
         id_result <- tryCatch(
           search_fn(db = "nucleotide", term = q, retmax = retmax),
           error = function(e) {
-            logger::log_error("Error retrieving IDs for query {i}: {e$message}")
+            logger::log_error("Error searching for query {i}: {e$message}")
             deficient_queries[[length(deficient_queries) + 1]] <<- list(
               query_index = i,
               query = q,
@@ -115,6 +113,13 @@ fetch_ncbi_sequences <- function(queries,
         if (is.null(id_result)) {
           return(tibble::tibble())
         }
+
+        if (id_result$count == 0) {
+          logger::log_warn("No results found for query")
+          return(tibble::tibble())
+        }
+
+        logger::log_info("Found {id_result$count} total sequences, retrieving all IDs...")
 
         retrieved_ids <- length(id_result$ids)
         logger::log_success("Retrieved {retrieved_ids} IDs")

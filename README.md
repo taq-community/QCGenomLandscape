@@ -84,17 +84,18 @@ NCBI_API_KEY=votre_clé_ici
 
 ### Export vers Arbutus (optionnel)
 
-Pour activer l'export des livrables vers Arbutus (stockage objet Swift), ajouter également dans `.Renviron`:
+L'authentification se fait par **identifiant applicatif** (application credential), pas par mot de passe — un compte protégé par MFA (comme la plupart des comptes Alliance Canada) ne peut pas s'authentifier par mot de passe simple via l'API.
+
+Pour en générer un : tableau de bord Horizon d'Arbutus → *Identity* → *Application Credentials* → *Create Application Credential* (ou `openstack application credential create <nom>` en ligne de commande, après une connexion interactive qui satisfait le MFA). L'ID et le secret ne sont affichés qu'une seule fois à la création.
+
+Ajouter ensuite dans `.Renviron` :
 
 ```
-SWIFT_AUTH_URL=https://...
-SWIFT_USERNAME=votre_nom_utilisateur
-SWIFT_PASSWORD=votre_mot_de_passe
-SWIFT_PROJECT_NAME=votre_projet
-SWIFT_DOMAIN=default
+SWIFT_APP_CRED_ID=votre_id
+SWIFT_APP_CRED_SECRET=votre_secret
 ```
 
-Ces informations s'obtiennent via le tableau de bord Arbutus ou un fichier `openrc.sh` (`OS_AUTH_URL`, `OS_USERNAME`, `OS_PROJECT_NAME`). Sans ces variables, le pipeline s'exécute normalement — les étapes d'export sont simplement ignorées (avec un avertissement).
+L'URL d'authentification a déjà la valeur par défaut du projet QCGenomicLandscape sur Arbutus — voir `?swift_auth` pour la surcharger (`SWIFT_AUTH_URL`) si vous pointez vers un autre projet OpenStack. Sans `SWIFT_APP_CRED_ID`/`SWIFT_APP_CRED_SECRET`, le pipeline s'exécute normalement — les étapes d'export sont simplement ignorées (avec un avertissement).
 
 ## Utilisation
 

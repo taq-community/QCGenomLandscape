@@ -29,12 +29,40 @@ test_that("build_ncbi_queries drops species with no matching primer marker", {
   expect_length(queries, 0)
 })
 
+test_that("build_ncbi_queries OR-combines species sharing a marker when batch_size > 1", {
+  queries <- build_ncbi_queries(species_df, query_primers, voucher = TRUE, batch_size = 25)
+
+  expect_length(queries, 1)
+  expect_true(grepl("^\\(Alces alces\\[Organism\\] OR Ursus americanus\\[Organism\\]\\)", queries))
+  expect_true(grepl("AND voucher\\[Title\\]$", queries))
+})
+
+test_that("build_ncbi_queries splits into multiple batches once batch_size is exceeded", {
+  queries <- build_ncbi_queries(species_df, query_primers, voucher = FALSE, batch_size = 1)
+
+  expect_length(queries, 2)
+  expect_false(any(grepl("OR", queries)))
+})
+
+test_that("build_ncbi_queries never mixes species across different markers in one batch", {
+  species_two_groups <- tibble::tibble(
+    species = c("Alces alces", "Salmo salar"),
+    group_en = c("Mammals", "Fish")
+  )
+  primers_two_groups <- tibble::tibble(
+    group = c("mammals", "fish"),
+    query_marker = c("COI[Gene]", "cytb[Gene]")
+  )
+
+  queries <- build_ncbi_queries(species_two_groups, primers_two_groups, batch_size = 25)
+
+  expect_length(queries, 2)
+  expect_false(any(grepl("OR", queries)))
+})
+
 # ---- fetch_ncbi_sequences: stubbed search_fn/summary_fn, no network ----
 
 fake_search_fn <- function(db, term, retmax) {
-  if (retmax == 0) {
-    return(list(count = 2))
-  }
   list(count = 2, ids = c("111", "222"))
 }
 
@@ -99,11 +127,11 @@ test_that("fetch_ncbi_sequences records a deficient query when search_fn errors"
 
   expect_equal(nrow(out$results), 0)
   expect_length(out$deficient_queries, 1)
-  expect_equal(out$deficient_queries[[1]]$error_type, "entrez_search_count")
+  expect_equal(out$deficient_queries[[1]]$error_type, "entrez_search_ids")
 })
 
 test_that("fetch_ncbi_sequences returns an empty result for a zero-count query", {
-  zero_count_search_fn <- function(db, term, retmax) list(count = 0)
+  zero_count_search_fn <- function(db, term, retmax) list(count = 0, ids = character(0))
 
   out <- fetch_ncbi_sequences(
     queries = "Nonexistent species[Organism]",

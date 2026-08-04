@@ -4,7 +4,7 @@
 \alias{build_ncbi_queries}
 \title{Build NCBI search query strings from a BDQC species list and primer map}
 \usage{
-build_ncbi_queries(species_df, query_primers, voucher = TRUE)
+build_ncbi_queries(species_df, query_primers, voucher = TRUE, batch_size = 1)
 }
 \arguments{
 \item{species_df}{Data frame from the BDQC species list csv, already
@@ -15,10 +15,19 @@ filtered to \code{rank == "species"} (must have \code{species} and \code{group_e
 
 \item{voucher}{Logical; if \code{TRUE} (default), appends \verb{AND voucher[Title]}
 to each query so results are restricted to specimen-voucher-backed records}
+
+\item{batch_size}{Integer, how many species (sharing the same marker) to
+OR together per query, default 1 (one query per species, matching the
+original per-species scripts). Keep this well under NCBI's query-length
+limits -- 20-50 is a reasonable range in practice.}
 }
 \value{
-Character vector of unique, non-\code{NA} Entrez query strings
+Character vector of unique Entrez query strings
 }
 \description{
-Build NCBI search query strings from a BDQC species list and primer map
+With \code{batch_size > 1}, species sharing the same \code{query_marker} are
+combined into a single OR'd query (\code{"(Sp1[Organism] OR Sp2[Organism] OR ...) AND marker[Gene]"}), cutting the number of Entrez searches by
+roughly \code{batch_size}x. Species are no longer recoverable by parsing the
+query string in that case -- use the \code{organism} field NCBI returns in
+\code{\link[=fetch_ncbi_sequences]{fetch_ncbi_sequences()}}'s results instead (already present in its output).
 }
