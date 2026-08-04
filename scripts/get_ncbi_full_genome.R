@@ -22,10 +22,20 @@ entrez_dbs()
 set_entrez_key(Sys.getenv("NCBI_API_KEY"))
 
 # Load species list
-qc_species <- read.csv("data/bdqc_list_01122025.csv") |>
-  filter(rank == "species") |>
-  distinct(species) |>
-  pull(species)
+# qc_species <- read.csv("data/bdqc_list_01122025.csv") |>
+#   filter(rank == "species") |>
+#   distinct(species) |>
+#   pull(species)
+
+# Species at risk from Google Sheet — "À risque" tab
+googlesheets4::gs4_auth()
+qc_species <- googlesheets4::read_sheet(
+  "1W5__6vlrnY1IeZPYEeTAx7a8bG8oLTpj4GRISthXsos",
+  sheet = "À risque"
+) |>
+  dplyr::pull(`Espèce`) |>
+  unique() |>
+  na.omit()
 
 log_info("Starting genome queries for {length(qc_species)} species")
 
@@ -47,7 +57,7 @@ query_full_genome <- function(species_name, query_index, total_queries) {
   tryCatch({
     # Query for nuclear genomes
     query <- paste0(species_name, "[Organism]")
-    log_info("  Nuclear query: {nuclear_query}")
+    log_info("  Nuclear query: {query}")
 
     nuclear_results <- rentrez::entrez_search(
       db = "genome",
@@ -100,7 +110,7 @@ genome_results <- map_df(
 )
 
 # Save results
-saveRDS(genome_results, "results/ncbi_genome_results.rds")
+saveRDS(genome_results, "results/ncbi_full_genome_species_at_risk.rds")
 
 # Summary statistics
 log_success("Completed!")
