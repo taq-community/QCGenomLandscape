@@ -148,17 +148,18 @@ rate limiting).</p>
 les enregistrements géoréférencés au Québec et retourne le TSV brut.</p>
 </div>
 <div class="section level3">
-<h3 id="ncbi-séquences-avec-et-sans-voucher">2. NCBI — séquences (avec et sans voucher)<a class="anchor" aria-label="anchor" href="#ncbi-s%C3%A9quences-avec-et-sans-voucher"></a>
+<h3 id="ncbi-séquences">2. NCBI — séquences<a class="anchor" aria-label="anchor" href="#ncbi-s%C3%A9quences"></a>
 </h3>
 <p><code><a href="../reference/build_ncbi_queries.html">build_ncbi_queries()</a></code> construit, pour chaque espèce ×
 marqueur (table de correspondance
 <code>primers_map_group_bdqc_list_01122025.csv</code>), une requête
-Entrez — avec (<code>voucher = TRUE</code>) ou sans
-(<code>voucher = FALSE</code>) le filtre <code>voucher[Title]</code>.
-<code><a href="../reference/fetch_ncbi_sequences.html">fetch_ncbi_sequences()</a></code> exécute ensuite ces requêtes par
-lots, avec gestion d’erreur et repli sur
+Entrez. <code><a href="../reference/fetch_ncbi_sequences.html">fetch_ncbi_sequences()</a></code> exécute ensuite ces requêtes
+par lots, avec gestion d’erreur et repli sur
 <code>deficient_queries</code>/<code>high_id_queries</code> pour les
-requêtes problématiques ou à fort volume (&gt;500 résultats).</p>
+requêtes problématiques ou à fort volume (&gt;500 résultats). Chaque
+enregistrement récupéré est ensuite classé <code>is_voucher</code> selon
+que son titre mentionne un spécimen voucher (au lieu de deux passes NCBI
+séparées, avec et sans le filtre <code>voucher[Title]</code>).</p>
 </div>
 <div class="section level3">
 <h3 id="ncbi-génomes-complets">3. NCBI — génomes complets<a class="anchor" aria-label="anchor" href="#ncbi-g%C3%A9nomes-complets"></a>
@@ -239,29 +240,26 @@ normalement.</p>
 </tr>
 <tr class="even">
 <td><code>results/ncbi_results.rds</code></td>
-<td>Séquences NCBI avec voucher</td>
+<td>Séquences NCBI (colonne <code>is_voucher</code> inférée du
+titre)</td>
 </tr>
 <tr class="odd">
-<td><code>results/ncbi_non_voucher_results.rds</code></td>
-<td>Séquences NCBI sans filtre voucher</td>
-</tr>
-<tr class="even">
 <td><code>results/ncbi_genome_results.rds</code></td>
 <td>Génomes complets (nucléaires/mitochondriaux) par espèce</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>results/genes_subsamp_50_df.rds</code></td>
 <td>Annotations géniques (sous-échantillon)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>results/sequence_qc.rds</code></td>
 <td>Métriques de qualité de séquence + détection de codons stop</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>results/genes_prevalence.svg</code></td>
 <td>Prévalence des marqueurs géniques par groupe taxonomique</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>results/risk_status_coverage.svg</code></td>
 <td>Couverture génomique par statut de conservation (Québec)</td>
 </tr>

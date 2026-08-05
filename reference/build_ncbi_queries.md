@@ -12,7 +12,7 @@ results instead (already present in its output).
 ## Usage
 
 ``` r
-build_ncbi_queries(species_df, query_primers, voucher = TRUE, batch_size = 1)
+build_ncbi_queries(species_df, query_primers, batch_size = 1)
 ```
 
 ## Arguments
@@ -26,11 +26,6 @@ build_ncbi_queries(species_df, query_primers, voucher = TRUE, batch_size = 1)
 
   Data frame from the primers-map csv (must have `group` and
   `query_marker` columns)
-
-- voucher:
-
-  Logical; if `TRUE` (default), appends `AND voucher[Title]` to each
-  query so results are restricted to specimen-voucher-backed records
 
 - batch_size:
 

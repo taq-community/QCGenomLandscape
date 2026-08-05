@@ -13,8 +13,9 @@ Le pipeline:
 
 1.  Télécharge les séquences barcode disponibles sur **BOLD Systems**
     pour le Québec
-2.  Interroge **NCBI** pour les séquences nucléotidiques (avec et sans
-    voucher) ainsi que les génomes complets
+2.  Interroge **NCBI** pour les séquences nucléotidiques (statut voucher
+    inféré du titre de chaque enregistrement) ainsi que les génomes
+    complets
 3.  Filtre géographiquement les enregistrements avec coordonnées à
     l’intérieur du Québec
 4.  Intègre les statuts de conservation (COSEPAC / LEMV), contrôle la
@@ -154,8 +155,9 @@ qc_species <- read.csv("data/bdqc_list_01122025.csv") |>
   dplyr::filter(rank == "species")
 query_primers <- read.csv2("data/primers_map_group_bdqc_list_01122025.csv")
 
-queries <- build_ncbi_queries(qc_species, query_primers, voucher = TRUE)
+queries <- build_ncbi_queries(qc_species, query_primers)
 ncbi <- fetch_ncbi_sequences(queries)
+# ncbi$results$is_voucher flags records whose title mentions a voucher specimen
 ```
 
 ## Bases de données
@@ -171,8 +173,7 @@ ncbi <- fetch_ncbi_sequences(queries)
 | Fichier | Description |
 |----|----|
 | `results/bold_qc_data.tsv` | Données BOLD brutes pour le Québec |
-| `results/ncbi_results.rds` | Séquences NCBI avec voucher (métadonnées complètes) |
-| `results/ncbi_non_voucher_results.rds` | Séquences NCBI sans filtre voucher |
+| `results/ncbi_results.rds` | Séquences NCBI (métadonnées complètes, colonne `is_voucher` inférée du titre) |
 | `results/ncbi_genome_results.rds` | Génomes complets (nucléaires/mitochondriaux) par espèce |
 | `results/genes_subsamp_50_df.rds` | Gènes annotés (sous-échantillon) |
 | `results/sequence_qc.rds` | Métriques de qualité de séquence + détection de codons stop |

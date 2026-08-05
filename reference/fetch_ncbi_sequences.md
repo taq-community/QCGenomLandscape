@@ -1,9 +1,9 @@
 # Fetch NCBI nucleotide records for a set of species/marker queries
 
-The batching/error-handling loop shared by the voucher and non-voucher
-NCBI query scripts. `search_fn`/`summary_fn` are injectable so the
-batching, high-ID-count flagging, and error-accumulation logic can be
-unit tested without live network access or an `NCBI_API_KEY`.
+The batching/error-handling loop behind the NCBI query step.
+`search_fn`/ `summary_fn` are injectable so the batching, high-ID-count
+flagging, and error-accumulation logic can be unit tested without live
+network access or an `NCBI_API_KEY`.
 
 ## Usage
 
@@ -56,6 +56,15 @@ fetch_ncbi_sequences(
 ## Value
 
 A list with three elements: `results` (tibble of parsed sequence
-summaries), `deficient_queries` (list of queries that errored), and
-`high_id_queries` (list of queries whose ID count exceeded
-`high_id_threshold`)
+summaries, with an `is_voucher` logical column), `deficient_queries`
+(list of queries that errored), and `high_id_queries` (list of queries
+whose ID count exceeded `high_id_threshold`)
+
+## Details
+
+Queries are no longer restricted server-side to voucher-backed records
+(the old `AND voucher[Title]` query suffix); instead every record is
+kept, and `results$is_voucher` flags whether `"voucher"` appears in its
+title (case-insensitive) – the same signal the title-filtered query used
+to rely on, just applied client-side after a single fetch instead of run
+twice (once filtered, once not).

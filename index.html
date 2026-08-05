@@ -62,7 +62,7 @@
 <p>Le pipeline:</p>
 <ol style="list-style-type: decimal">
 <li>Télécharge les séquences barcode disponibles sur <strong>BOLD Systems</strong> pour le Québec</li>
-<li>Interroge <strong>NCBI</strong> pour les séquences nucléotidiques (avec et sans voucher) ainsi que les génomes complets</li>
+<li>Interroge <strong>NCBI</strong> pour les séquences nucléotidiques (statut voucher inféré du titre de chaque enregistrement) ainsi que les génomes complets</li>
 <li>Filtre géographiquement les enregistrements avec coordonnées à l’intérieur du Québec</li>
 <li>Intègre les statuts de conservation (COSEPAC / LEMV), contrôle la qualité des séquences (détection de codons stop) et produit des figures de couverture</li>
 <li>Exporte optionnellement les livrables vers un conteneur Arbutus (Swift)</li>
@@ -172,8 +172,9 @@
 <span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">rank</span> <span class="op">==</span> <span class="st">"species"</span><span class="op">)</span></span>
 <span><span class="va">query_primers</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv2</a></span><span class="op">(</span><span class="st">"data/primers_map_group_bdqc_list_01122025.csv"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">queries</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/build_ncbi_queries.html">build_ncbi_queries</a></span><span class="op">(</span><span class="va">qc_species</span>, <span class="va">query_primers</span>, voucher <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="va">ncbi</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/fetch_ncbi_sequences.html">fetch_ncbi_sequences</a></span><span class="op">(</span><span class="va">queries</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">queries</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/build_ncbi_queries.html">build_ncbi_queries</a></span><span class="op">(</span><span class="va">qc_species</span>, <span class="va">query_primers</span><span class="op">)</span></span>
+<span><span class="va">ncbi</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/fetch_ncbi_sequences.html">fetch_ncbi_sequences</a></span><span class="op">(</span><span class="va">queries</span><span class="op">)</span></span>
+<span><span class="co"># ncbi$results$is_voucher flags records whose title mentions a voucher specimen</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="bases-de-données">Bases de données<a class="anchor" aria-label="anchor" href="#bases-de-donn%C3%A9es"></a>
@@ -227,11 +228,7 @@
 </tr>
 <tr>
 <td><code>results/ncbi_results.rds</code></td>
-<td>Séquences NCBI avec voucher (métadonnées complètes)</td>
-</tr>
-<tr>
-<td><code>results/ncbi_non_voucher_results.rds</code></td>
-<td>Séquences NCBI sans filtre voucher</td>
+<td>Séquences NCBI (métadonnées complètes, colonne <code>is_voucher</code> inférée du titre)</td>
 </tr>
 <tr>
 <td><code>results/ncbi_genome_results.rds</code></td>

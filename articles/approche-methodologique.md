@@ -48,17 +48,18 @@ targets::tar_make()
 interroge le portail BOLD pour les enregistrements géoréférencés au
 Québec et retourne le TSV brut.
 
-### 2. NCBI — séquences (avec et sans voucher)
+### 2. NCBI — séquences
 
 [`build_ncbi_queries()`](https://taq-community.github.io/QCGenomLandscape/reference/build_ncbi_queries.md)
 construit, pour chaque espèce × marqueur (table de correspondance
-`primers_map_group_bdqc_list_01122025.csv`), une requête Entrez — avec
-(`voucher = TRUE`) ou sans (`voucher = FALSE`) le filtre
-`voucher[Title]`.
+`primers_map_group_bdqc_list_01122025.csv`), une requête Entrez.
 [`fetch_ncbi_sequences()`](https://taq-community.github.io/QCGenomLandscape/reference/fetch_ncbi_sequences.md)
 exécute ensuite ces requêtes par lots, avec gestion d’erreur et repli
 sur `deficient_queries`/`high_id_queries` pour les requêtes
-problématiques ou à fort volume (\>500 résultats).
+problématiques ou à fort volume (\>500 résultats). Chaque enregistrement
+récupéré est ensuite classé `is_voucher` selon que son titre mentionne
+un spécimen voucher (au lieu de deux passes NCBI séparées, avec et sans
+le filtre `voucher[Title]`).
 
 ### 3. NCBI — génomes complets
 
@@ -127,8 +128,7 @@ pipeline s’exécute normalement.
 | Fichier | Description |
 |----|----|
 | `results/bold_qc_data.tsv` | Données BOLD brutes pour le Québec |
-| `results/ncbi_results.rds` | Séquences NCBI avec voucher |
-| `results/ncbi_non_voucher_results.rds` | Séquences NCBI sans filtre voucher |
+| `results/ncbi_results.rds` | Séquences NCBI (colonne `is_voucher` inférée du titre) |
 | `results/ncbi_genome_results.rds` | Génomes complets (nucléaires/mitochondriaux) par espèce |
 | `results/genes_subsamp_50_df.rds` | Annotations géniques (sous-échantillon) |
 | `results/sequence_qc.rds` | Métriques de qualité de séquence + détection de codons stop |
