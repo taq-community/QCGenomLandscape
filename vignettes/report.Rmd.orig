@@ -1,0 +1,46 @@
+---
+title: "Rapport de couverture génomique"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Rapport de couverture génomique}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "report-fig-",
+  fig.width = 8,
+  fig.height = 6
+)
+```
+
+Ce rapport est précompilé à partir du dernier run complet du pipeline `targets`
+(`_targets.R`) -- il ne relance aucun appel à NCBI/BOLD au moment du build.
+Pour le régénérer après un nouveau run, voir `vignettes/precompile.R`.
+
+```{r setup}
+library(targets)
+store <- "../_targets"
+```
+
+## Table récapitulative par espèce
+
+```{r summary-table}
+summary_table <- tar_read(summary_table, store = store)
+knitr::kable(head(summary_table, 20))
+```
+
+## Prévalence des marqueurs génétiques par groupe taxonomique
+
+```{r gene-prevalence-plot}
+tar_read(gene_prevalence_plot, store = store)
+```
+
+## Couverture génomique des espèces à statut de conservation (Québec)
+
+```{r risk-status-plot}
+tar_read(risk_status_plot, store = store)
+```

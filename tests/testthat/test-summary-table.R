@@ -3,8 +3,8 @@ test_that("build_summary_dataframe joins sequence counts, gene markers, taxonomy
     # a batched query (multiple species OR'd together) -- species must come
     # from `organism`, not be parsed out of `query`
     query = c(
-      "(Alces alces[Organism] OR Ursus americanus[Organism]) AND COI[Gene] AND voucher[Title]",
-      "(Alces alces[Organism] OR Ursus americanus[Organism]) AND COI[Gene] AND voucher[Title]"
+      "(Alces alces[Organism] OR Ursus americanus[Organism]) AND COI[Gene]",
+      "(Alces alces[Organism] OR Ursus americanus[Organism]) AND COI[Gene]"
     ),
     organism = c("Alces alces", "Alces alces"),
     accession = c("ACC1", "ACC2")

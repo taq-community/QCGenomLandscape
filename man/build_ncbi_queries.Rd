@@ -4,7 +4,7 @@
 \alias{build_ncbi_queries}
 \title{Build NCBI search query strings from a BDQC species list and primer map}
 \usage{
-build_ncbi_queries(species_df, query_primers, voucher = TRUE, batch_size = 1)
+build_ncbi_queries(species_df, query_primers, batch_size = 1)
 }
 \arguments{
 \item{species_df}{Data frame from the BDQC species list csv, already
@@ -12,9 +12,6 @@ filtered to \code{rank == "species"} (must have \code{species} and \code{group_e
 
 \item{query_primers}{Data frame from the primers-map csv (must have
 \code{group} and \code{query_marker} columns)}
-
-\item{voucher}{Logical; if \code{TRUE} (default), appends \verb{AND voucher[Title]}
-to each query so results are restricted to specimen-voucher-backed records}
 
 \item{batch_size}{Integer, how many species (sharing the same marker) to
 OR together per query, default 1 (one query per species, matching the

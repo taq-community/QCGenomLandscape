@@ -35,12 +35,21 @@ flagged in \code{high_id_queries}, default 500}
 }
 \value{
 A list with three elements: \code{results} (tibble of parsed sequence
-summaries), \code{deficient_queries} (list of queries that errored), and
-\code{high_id_queries} (list of queries whose ID count exceeded \code{high_id_threshold})
+summaries, with an \code{is_voucher} logical column), \code{deficient_queries}
+(list of queries that errored), and \code{high_id_queries} (list of queries
+whose ID count exceeded \code{high_id_threshold})
 }
 \description{
-The batching/error-handling loop shared by the voucher and non-voucher
-NCBI query scripts. \code{search_fn}/\code{summary_fn} are injectable so the
-batching, high-ID-count flagging, and error-accumulation logic can be unit
-tested without live network access or an \code{NCBI_API_KEY}.
+The batching/error-handling loop behind the NCBI query step. \code{search_fn}/
+\code{summary_fn} are injectable so the batching, high-ID-count flagging, and
+error-accumulation logic can be unit tested without live network access or
+an \code{NCBI_API_KEY}.
+}
+\details{
+Queries are no longer restricted server-side to voucher-backed records
+(the old \verb{AND voucher[Title]} query suffix); instead every record is kept,
+and \code{results$is_voucher} flags whether \code{"voucher"} appears in its title
+(case-insensitive) -- the same signal the title-filtered query used to
+rely on, just applied client-side after a single fetch instead of run
+twice (once filtered, once not).
 }

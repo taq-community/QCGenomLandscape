@@ -8,6 +8,8 @@ fetch_gb_records(
   accessions,
   batch_size = 50,
   fetch_fn = rentrez::entrez_fetch,
+  max_retries = 3,
+  sleep_fn = Sys.sleep,
   progress = TRUE
 )
 }
@@ -19,11 +21,23 @@ fetch_gb_records(
 \item{fetch_fn}{Function with signature \verb{(db, id, rettype, retmode)},
 default \code{\link[rentrez:entrez_fetch]{rentrez::entrez_fetch()}}; injectable for testing without network access}
 
+\item{max_retries}{Integer, attempts per batch before giving up on it,
+default 3 (exponential backoff between attempts: 2s, 4s, ...)}
+
+\item{sleep_fn}{Function with signature \code{(seconds)}, default \code{\link[=Sys.sleep]{Sys.sleep()}};
+injectable so retry backoff doesn't slow down tests}
+
 \item{progress}{Logical, show a progress bar, default \code{TRUE}}
 }
 \value{
-A list of character scalars, one raw GenBank flat-file blob per batch
+A list of character scalars, one raw GenBank flat-file blob per
+successful batch (shorter than the number of batches if any were
+dropped after exhausting retries)
 }
 \description{
-Fetch raw GenBank flat-file text for a set of accessions
+Transient network/SSL errors (e.g. NCBI dropping the connection mid-
+response) are retried with backoff; a batch that still fails after
+\code{max_retries} is logged and dropped rather than failing the whole call --
+with batch sizes in the hundreds, one flaky batch shouldn't lose every
+other batch's sequences.
 }

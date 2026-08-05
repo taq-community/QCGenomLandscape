@@ -94,51 +94,35 @@ list(
     file.path(results_dir, "bold_qc_data.tsv")
   }, format = "file"),
 
-  # ---- 2. NCBI sequences (voucher) ---------------------------------------
+  # ---- 2. NCBI sequences + geo-filter --------------------------------------
   # batch_size batches species sharing a marker into one OR'd Entrez query --
   # cuts total NCBI requests by roughly that factor. Species are recovered
   # afterwards from the `organism` field NCBI returns, not by parsing `query`.
+  # No more server-side voucher[Title] restriction (that used to mean two
+  # full passes, filtered and unfiltered) -- fetch_ncbi_sequences() infers
+  # `is_voucher` per record from its title instead, so one pass covers both.
   tar_target(
-    ncbi_queries_voucher,
-    QCGenomLandscape::build_ncbi_queries(bdqc_species, query_primers, voucher = TRUE, batch_size = 25)
+    ncbi_queries,
+    QCGenomLandscape::build_ncbi_queries(bdqc_species, query_primers, batch_size = 25)
   ),
-  tar_target(ncbi_voucher, QCGenomLandscape::fetch_ncbi_sequences(ncbi_queries_voucher)),
+  tar_target(ncbi_sequences, QCGenomLandscape::fetch_ncbi_sequences(ncbi_queries)),
   tar_target(ncbi_results_saved, {
-    saveRDS(ncbi_voucher$results, file.path(results_dir, "ncbi_results.rds"))
+    saveRDS(ncbi_sequences$results, file.path(results_dir, "ncbi_results.rds"))
     file.path(results_dir, "ncbi_results.rds")
   }, format = "file"),
   tar_target(deficient_queries_saved, {
-    saveRDS(ncbi_voucher$deficient_queries, file.path(results_dir, "deficient_queries.rds"))
+    saveRDS(ncbi_sequences$deficient_queries, file.path(results_dir, "deficient_queries.rds"))
     file.path(results_dir, "deficient_queries.rds")
   }, format = "file"),
   tar_target(high_id_queries_saved, {
-    saveRDS(ncbi_voucher$high_id_queries, file.path(results_dir, "high_id_queries.rds"))
+    saveRDS(ncbi_sequences$high_id_queries, file.path(results_dir, "high_id_queries.rds"))
     file.path(results_dir, "high_id_queries.rds")
   }, format = "file"),
-
-  # ---- 3. NCBI sequences (non-voucher) + geo-filter ----------------------
-  tar_target(
-    ncbi_queries_non_voucher,
-    QCGenomLandscape::build_ncbi_queries(bdqc_species, query_primers, voucher = FALSE, batch_size = 25)
-  ),
-  tar_target(ncbi_non_voucher, QCGenomLandscape::fetch_ncbi_sequences(ncbi_queries_non_voucher)),
-  tar_target(ncbi_non_voucher_results_saved, {
-    saveRDS(ncbi_non_voucher$results, file.path(results_dir, "ncbi_non_voucher_results.rds"))
-    file.path(results_dir, "ncbi_non_voucher_results.rds")
-  }, format = "file"),
-  tar_target(deficient_queries_non_voucher_saved, {
-    saveRDS(ncbi_non_voucher$deficient_queries, file.path(results_dir, "deficient_queries_non_voucher_results.rds"))
-    file.path(results_dir, "deficient_queries_non_voucher_results.rds")
-  }, format = "file"),
-  tar_target(high_id_queries_non_voucher_saved, {
-    saveRDS(ncbi_non_voucher$high_id_queries, file.path(results_dir, "high_id_queries_non_voucher_results.rds"))
-    file.path(results_dir, "high_id_queries_non_voucher_results.rds")
-  }, format = "file"),
-  # Geo-filtered (QC/CA) view of the non-voucher results -- demonstrates
-  # load_canvec_boundary()/flag_within_boundary(), not saved to a named
-  # results/ file since the original script only used this interactively
-  tar_target(ncbi_non_voucher_geo, {
-    pts <- ncbi_non_voucher$results |>
+  # Geo-filtered (QC/CA) view -- demonstrates load_canvec_boundary()/
+  # flag_within_boundary(), not saved to a named results/ file since the
+  # original script only used this interactively
+  tar_target(ncbi_geo, {
+    pts <- ncbi_sequences$results |>
       dplyr::mutate(
         parsed_coords = purrr::map(lat_lon, QCGenomLandscape::parse_latlon),
         latitude = purrr::map_dbl(parsed_coords, "lat"),
@@ -152,7 +136,7 @@ list(
     QCGenomLandscape::flag_within_boundary(pts, ca_boundary, "in_ca")
   }),
 
-  # ---- 4. NCBI full genomes -----------------------------------------------
+  # ---- 3. NCBI full genomes -----------------------------------------------
   # Batched: a cheap OR'd existence check per batch of 25 species short-
   # circuits the (common) all-zero-hits case, falling back to per-species
   # resolution only for batches with an actual genome/mitogenome hit.
@@ -165,10 +149,10 @@ list(
     file.path(results_dir, "ncbi_genome_results.rds")
   }, format = "file"),
 
-  # ---- 5. Gene annotations (subsample) + taxon_representation figures ----
+  # ---- 4. Gene annotations (subsample) + taxon_representation figures ----
   tar_target(gene_accessions, {
     set.seed(42)
-    ncbi_voucher$results |>
+    ncbi_sequences$results |>
       dplyr::mutate(species = organism) |>
       dplyr::group_by(species) |>
       dplyr::slice_sample(n = 5) |>
@@ -184,7 +168,7 @@ list(
   tar_target(genes_grouped, gene_annotations |>
     dplyr::mutate(gene_group = QCGenomLandscape::assign_gene_group(gene)) |>
     dplyr::left_join(
-      ncbi_voucher$results |>
+      ncbi_sequences$results |>
         dplyr::mutate(species = organism) |>
         dplyr::select(accession, species),
       by = "accession"
@@ -207,14 +191,14 @@ list(
     file.path(results_dir, "risk_status_coverage.svg")
   }, format = "file"),
 
-  # ---- 6. Summary table ---------------------------------------------------
+  # ---- 5. Summary table ---------------------------------------------------
   tar_target(
     summary_table,
-    QCGenomLandscape::build_summary_dataframe(ncbi_voucher$results, gene_annotations, bdqc_taxo, ca_risk, qc_risk)
+    QCGenomLandscape::build_summary_dataframe(ncbi_sequences$results, gene_annotations, bdqc_taxo, ca_risk, qc_risk)
   ),
 
-  # ---- 7. Sequence QC ------------------------------------------------------
-  tar_target(qc_accessions, ncbi_voucher$results |>
+  # ---- 6. Sequence QC ------------------------------------------------------
+  tar_target(qc_accessions, ncbi_sequences$results |>
     dplyr::filter(!is.na(organism), !is.na(accession)) |>
     dplyr::pull(accession) |>
     unique()),
@@ -229,24 +213,12 @@ list(
     file.path(results_dir, "sequence_qc.rds")
   }, format = "file"),
 
-  # ---- 8. Arbutus/Swift export ---------------------------------------------
+  # ---- 7. Arbutus/Swift export ---------------------------------------------
   tar_target(swift_token, get_swift_token()),
   tar_target(bold_swift, maybe_upload_to_swift(bold_saved, swift_token)),
   tar_target(ncbi_results_swift, maybe_upload_to_swift(ncbi_results_saved, swift_token)),
   tar_target(deficient_queries_swift, maybe_upload_to_swift(deficient_queries_saved, swift_token)),
   tar_target(high_id_queries_swift, maybe_upload_to_swift(high_id_queries_saved, swift_token)),
-  tar_target(
-    ncbi_non_voucher_results_swift,
-    maybe_upload_to_swift(ncbi_non_voucher_results_saved, swift_token)
-  ),
-  tar_target(
-    deficient_queries_non_voucher_swift,
-    maybe_upload_to_swift(deficient_queries_non_voucher_saved, swift_token)
-  ),
-  tar_target(
-    high_id_queries_non_voucher_swift,
-    maybe_upload_to_swift(high_id_queries_non_voucher_saved, swift_token)
-  ),
   tar_target(ncbi_genome_results_swift, maybe_upload_to_swift(ncbi_genome_results_saved, swift_token)),
   tar_target(genes_swift, maybe_upload_to_swift(genes_saved, swift_token)),
   tar_target(gene_prevalence_swift, maybe_upload_to_swift(gene_prevalence_saved, swift_token)),

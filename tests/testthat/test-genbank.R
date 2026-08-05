@@ -55,3 +55,58 @@ test_that("parse_gb_records returns NA sequence when there is no ORIGIN block", 
 
   expect_true(is.na(parsed$sequence[parsed$accession == "GHI789"]))
 })
+
+# ---- fetch_gb_records: stubbed fetch_fn, no network ----
+
+test_that("fetch_gb_records returns one blob per batch when every fetch succeeds", {
+  out <- fetch_gb_records(
+    accessions = c("A1", "A2", "A3"),
+    batch_size = 2,
+    fetch_fn = function(db, id, rettype, retmode) paste(id, collapse = ","),
+    progress = FALSE
+  )
+
+  expect_length(out, 2)
+  expect_equal(out[[1]], "A1,A2")
+  expect_equal(out[[2]], "A3")
+})
+
+test_that("fetch_gb_records retries a failing batch and keeps the result once it succeeds", {
+  attempts <- 0
+  flaky_fetch_fn <- function(db, id, rettype, retmode) {
+    attempts <<- attempts + 1
+    if (attempts < 2) stop("simulated transient SSL error")
+    "recovered text"
+  }
+
+  out <- fetch_gb_records(
+    accessions = c("A1"),
+    batch_size = 50,
+    fetch_fn = flaky_fetch_fn,
+    max_retries = 3,
+    sleep_fn = function(seconds) invisible(NULL),
+    progress = FALSE
+  )
+
+  expect_equal(attempts, 2)
+  expect_equal(out, list("recovered text"))
+})
+
+test_that("fetch_gb_records drops a batch that fails on every attempt instead of erroring", {
+  always_fails_fn <- function(db, id, rettype, retmode) stop("simulated persistent SSL error")
+
+  out <- fetch_gb_records(
+    accessions = c("A1", "A2", "A3", "A4"),
+    batch_size = 2,
+    fetch_fn = function(db, id, rettype, retmode) {
+      if (identical(id, c("A1", "A2"))) always_fails_fn(db, id, rettype, retmode)
+      paste(id, collapse = ",")
+    },
+    max_retries = 2,
+    sleep_fn = function(seconds) invisible(NULL),
+    progress = FALSE
+  )
+
+  expect_length(out, 1)
+  expect_equal(out[[1]], "A3,A4")
+})

@@ -41,21 +41,56 @@ fetch_gene_annotations <- function(accessions, batch_size = 200,
 
 #' Fetch raw GenBank flat-file text for a set of accessions
 #'
+#' Transient network/SSL errors (e.g. NCBI dropping the connection mid-
+#' response) are retried with backoff; a batch that still fails after
+#' `max_retries` is logged and dropped rather than failing the whole call --
+#' with batch sizes in the hundreds, one flaky batch shouldn't lose every
+#' other batch's sequences.
+#'
 #' @param accessions Character vector of NCBI accession numbers
 #' @param batch_size Integer, number of accessions fetched per request, default 50
 #' @param fetch_fn Function with signature `(db, id, rettype, retmode)`,
 #'   default [rentrez::entrez_fetch()]; injectable for testing without network access
+#' @param max_retries Integer, attempts per batch before giving up on it,
+#'   default 3 (exponential backoff between attempts: 2s, 4s, ...)
+#' @param sleep_fn Function with signature `(seconds)`, default [Sys.sleep()];
+#'   injectable so retry backoff doesn't slow down tests
 #' @param progress Logical, show a progress bar, default `TRUE`
-#' @return A list of character scalars, one raw GenBank flat-file blob per batch
+#' @return A list of character scalars, one raw GenBank flat-file blob per
+#'   successful batch (shorter than the number of batches if any were
+#'   dropped after exhausting retries)
 #' @export
 fetch_gb_records <- function(accessions, batch_size = 50,
                               fetch_fn = rentrez::entrez_fetch,
+                              max_retries = 3,
+                              sleep_fn = Sys.sleep,
                               progress = TRUE) {
   batches <- split(accessions, ceiling(seq_along(accessions) / batch_size))
 
-  purrr::map(batches, \(batch) {
-    fetch_fn(db = "nucleotide", id = batch, rettype = "gb", retmode = "text")
+  results <- purrr::map(seq_along(batches), function(i) {
+    for (attempt in seq_len(max_retries)) {
+      result <- tryCatch(
+        fetch_fn(db = "nucleotide", id = batches[[i]], rettype = "gb", retmode = "text"),
+        error = function(e) {
+          logger::log_warn(
+            "fetch_gb_records batch {i}/{length(batches)} attempt {attempt}/{max_retries} failed: {e$message}"
+          )
+          NULL
+        }
+      )
+      if (!is.null(result)) {
+        return(result)
+      }
+      if (attempt < max_retries) sleep_fn(2^attempt)
+    }
+    logger::log_error(
+      "fetch_gb_records batch {i}/{length(batches)} failed after {max_retries} attempts -- ",
+      "dropping ({length(batches[[i]])} accessions)"
+    )
+    NULL
   }, .progress = progress)
+
+  purrr::compact(results)
 }
 
 #' Parse accession/gene/sequence out of GenBank flat-file text

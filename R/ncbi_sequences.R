@@ -11,17 +11,13 @@
 #'   filtered to `rank == "species"` (must have `species` and `group_en` columns)
 #' @param query_primers Data frame from the primers-map csv (must have
 #'   `group` and `query_marker` columns)
-#' @param voucher Logical; if `TRUE` (default), appends `AND voucher[Title]`
-#'   to each query so results are restricted to specimen-voucher-backed records
 #' @param batch_size Integer, how many species (sharing the same marker) to
 #'   OR together per query, default 1 (one query per species, matching the
 #'   original per-species scripts). Keep this well under NCBI's query-length
 #'   limits -- 20-50 is a reasonable range in practice.
 #' @return Character vector of unique Entrez query strings
 #' @export
-build_ncbi_queries <- function(species_df, query_primers, voucher = TRUE, batch_size = 1) {
-  suffix <- if (voucher) " AND voucher[Title]" else ""
-
+build_ncbi_queries <- function(species_df, query_primers, batch_size = 1) {
   joined <- species_df |>
     dplyr::mutate(group = tolower(group_en)) |>
     dplyr::left_join(
@@ -33,7 +29,7 @@ build_ncbi_queries <- function(species_df, query_primers, voucher = TRUE, batch_
 
   if (batch_size <= 1) {
     return(
-      glue::glue("{joined$species}[Organism] AND {joined$query_marker}{suffix}") |>
+      glue::glue("{joined$species}[Organism] AND {joined$query_marker}") |>
         unique() |>
         as.character()
     )
@@ -43,7 +39,7 @@ build_ncbi_queries <- function(species_df, query_primers, voucher = TRUE, batch_
     dplyr::group_by(query_marker) |>
     dplyr::group_map(function(rows, key) {
       purrr::map_chr(chunk_species(rows$species, batch_size), function(sp) {
-        as.character(glue::glue("{build_organism_clause(sp)} AND {key$query_marker}{suffix}"))
+        as.character(glue::glue("{build_organism_clause(sp)} AND {key$query_marker}"))
       })
     }) |>
     unlist() |>
@@ -53,10 +49,17 @@ build_ncbi_queries <- function(species_df, query_primers, voucher = TRUE, batch_
 
 #' Fetch NCBI nucleotide records for a set of species/marker queries
 #'
-#' The batching/error-handling loop shared by the voucher and non-voucher
-#' NCBI query scripts. `search_fn`/`summary_fn` are injectable so the
-#' batching, high-ID-count flagging, and error-accumulation logic can be unit
-#' tested without live network access or an `NCBI_API_KEY`.
+#' The batching/error-handling loop behind the NCBI query step. `search_fn`/
+#' `summary_fn` are injectable so the batching, high-ID-count flagging, and
+#' error-accumulation logic can be unit tested without live network access or
+#' an `NCBI_API_KEY`.
+#'
+#' Queries are no longer restricted server-side to voucher-backed records
+#' (the old `AND voucher[Title]` query suffix); instead every record is kept,
+#' and `results$is_voucher` flags whether `"voucher"` appears in its title
+#' (case-insensitive) -- the same signal the title-filtered query used to
+#' rely on, just applied client-side after a single fetch instead of run
+#' twice (once filtered, once not).
 #'
 #' @param queries Character vector of Entrez query strings, e.g. from
 #'   [build_ncbi_queries()]
@@ -70,8 +73,9 @@ build_ncbi_queries <- function(species_df, query_primers, voucher = TRUE, batch_
 #'   [rentrez::entrez_summary()]
 #' @param progress Logical, show a progress bar, default `TRUE`
 #' @return A list with three elements: `results` (tibble of parsed sequence
-#'   summaries), `deficient_queries` (list of queries that errored), and
-#'   `high_id_queries` (list of queries whose ID count exceeded `high_id_threshold`)
+#'   summaries, with an `is_voucher` logical column), `deficient_queries`
+#'   (list of queries that errored), and `high_id_queries` (list of queries
+#'   whose ID count exceeded `high_id_threshold`)
 #' @importFrom rlang %||%
 #' @export
 fetch_ncbi_sequences <- function(queries,
@@ -211,6 +215,14 @@ fetch_ncbi_sequences <- function(queries,
     )
   }, .progress = progress) |>
     dplyr::filter(!dplyr::if_all(dplyr::everything(), is.na))
+
+  if (nrow(results) > 0) {
+    results <- results |>
+      dplyr::mutate(is_voucher = dplyr::coalesce(
+        stringr::str_detect(title, stringr::regex("voucher", ignore_case = TRUE)),
+        FALSE
+      ))
+  }
 
   list(
     results = results,

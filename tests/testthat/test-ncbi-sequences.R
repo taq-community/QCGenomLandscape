@@ -7,19 +7,12 @@ query_primers <- tibble::tibble(
   query_marker = c("COI[Gene]")
 )
 
-test_that("build_ncbi_queries appends the voucher filter when voucher = TRUE", {
-  queries <- build_ncbi_queries(species_df, query_primers, voucher = TRUE)
-
-  expect_length(queries, 2)
-  expect_true(all(grepl("AND voucher\\[Title\\]$", queries)))
-  expect_true(any(grepl("^Alces alces\\[Organism\\]", queries)))
-})
-
-test_that("build_ncbi_queries omits the voucher filter when voucher = FALSE", {
-  queries <- build_ncbi_queries(species_df, query_primers, voucher = FALSE)
+test_that("build_ncbi_queries builds one query per species/marker pair", {
+  queries <- build_ncbi_queries(species_df, query_primers)
 
   expect_length(queries, 2)
   expect_false(any(grepl("voucher", queries)))
+  expect_true(any(grepl("^Alces alces\\[Organism\\]", queries)))
 })
 
 test_that("build_ncbi_queries drops species with no matching primer marker", {
@@ -30,15 +23,14 @@ test_that("build_ncbi_queries drops species with no matching primer marker", {
 })
 
 test_that("build_ncbi_queries OR-combines species sharing a marker when batch_size > 1", {
-  queries <- build_ncbi_queries(species_df, query_primers, voucher = TRUE, batch_size = 25)
+  queries <- build_ncbi_queries(species_df, query_primers, batch_size = 25)
 
   expect_length(queries, 1)
   expect_true(grepl("^\\(Alces alces\\[Organism\\] OR Ursus americanus\\[Organism\\]\\)", queries))
-  expect_true(grepl("AND voucher\\[Title\\]$", queries))
 })
 
 test_that("build_ncbi_queries splits into multiple batches once batch_size is exceeded", {
-  queries <- build_ncbi_queries(species_df, query_primers, voucher = FALSE, batch_size = 1)
+  queries <- build_ncbi_queries(species_df, query_primers, batch_size = 1)
 
   expect_length(queries, 2)
   expect_false(any(grepl("OR", queries)))
@@ -98,8 +90,36 @@ test_that("fetch_ncbi_sequences builds a results tibble from stubbed search/summ
   expect_equal(nrow(out$results), 2)
   expect_equal(out$results$accession, c("ACC111", "ACC222"))
   expect_equal(out$results$specimen_voucher, c("ABC:123", "ABC:123"))
+  expect_equal(out$results$is_voucher, c(FALSE, FALSE))
   expect_length(out$deficient_queries, 0)
   expect_length(out$high_id_queries, 0)
+})
+
+test_that("fetch_ncbi_sequences infers is_voucher from the record title, case-insensitively", {
+  mixed_title_summary_fn <- function(db, id) {
+    titles <- c(
+      "111" = "Alces alces voucher specimen COI gene, partial cds",
+      "222" = "Alces alces VOUCHER XYZ COI gene",
+      "333" = "Alces alces isolate ABC COI gene, partial cds"
+    )
+    purrr::map(id, function(x) {
+      list(
+        uid = x,
+        accessionversion = paste0("ACC", x),
+        title = titles[[x]],
+        organism = "Alces alces"
+      )
+    })
+  }
+
+  out <- fetch_ncbi_sequences(
+    queries = "Alces alces[Organism] AND COI[Gene]",
+    search_fn = function(db, term, retmax) list(count = 3, ids = c("111", "222", "333")),
+    summary_fn = mixed_title_summary_fn,
+    progress = FALSE
+  )
+
+  expect_equal(out$results$is_voucher, c(TRUE, TRUE, FALSE))
 })
 
 test_that("fetch_ncbi_sequences flags queries above the high-ID threshold", {
