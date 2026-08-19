@@ -2,23 +2,32 @@
 % Please edit documentation in R/sequence_qc.R
 \name{has_stop_codon_coi}
 \alias{has_stop_codon_coi}
-\title{Check for in-frame stop codons in a nucleotide sequence (COI / SGC4 code)}
+\title{Check for in-frame stop codons in DNA sequences (COI / SGC4 code)}
 \usage{
 has_stop_codon_coi(seq)
 }
 \arguments{
-\item{seq}{Character scalar, a DNA sequence (case-insensitive)}
+\item{seq}{Character vector of DNA sequences (case-insensitive); \code{NA}
+elements return \code{NA}}
 }
 \value{
-Logical scalar, or \code{NA} if \code{seq} is \code{NA}
+Logical vector, the same length as \code{seq}
 }
 \description{
-Translates \code{seq} in all 3 forward reading frames using the invertebrate
-mitochondrial genetic code (NCBI translation table 5 / SGC4, the standard
-code for COI barcoding) and flags whether any frame contains a stop codon.
+Translates each sequence in all 3 forward reading frames using the
+invertebrate mitochondrial genetic code (NCBI translation table 5 / SGC4,
+the standard code for COI barcoding) and flags whether any frame contains
+a stop codon.
+}
+\details{
+Vectorized over \code{seq}: all sequences are translated together per frame in
+one \code{Biostrings::translate()} call (3 calls total) instead of looping
+element by element and re-deriving the genetic code table each time. This
+is the hot path in \code{\link[=build_sequence_qc_table]{build_sequence_qc_table()}} -- a full BDQC run checks
+hundreds of thousands of sequences, where the old per-element scalar
+version took hours.
 }
 \examples{
-\dontrun{
 has_stop_codon_coi("atgtaaatg")
-}
+has_stop_codon_coi(c("atgtaaatg", "aaaaaaaaa", NA))
 }

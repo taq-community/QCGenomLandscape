@@ -3,6 +3,7 @@
 export(align_sequences)
 export(assign_gene_group)
 export(build_ncbi_queries)
+export(build_sequence_qc_table)
 export(build_summary_dataframe)
 export(build_summary_dataframe_from_files)
 export(classify_taxon_group)

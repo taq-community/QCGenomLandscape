@@ -18,6 +18,39 @@ logger::log_appender(logger::appender_file(
 logger::log_threshold(logger::INFO)
 rentrez::set_entrez_key(Sys.getenv("NCBI_API_KEY"))
 
+# ---- Cloud-backed store for expensive-to-recompute targets ----------------
+# ncbi_sequences/gb_records/seq_data are the multi-hour steps -- storing
+# their data in Arbutus S3 (not just local _targets/objects/) lets a
+# collaborator fetch already-computed results via tar_make() instead of
+# re-running the NCBI fetch/parse from scratch.
+#
+# Needs AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY -- Arbutus S3 "EC2
+# credentials", generated with `openstack ec2 credentials create` (or via
+# Horizon: Project > API Access > EC2 Credentials), NOT the
+# SWIFT_APP_CRED_ID/SECRET used for the native Swift upload step below --
+# see https://docs.alliancecan.ca/wiki/Accessing_object_storage_with_s3cmd.
+# QCGL_S3_BUCKET must already exist (`s3cmd mb s3://BUCKET_NAME/`).
+#
+# Falls back to the default local-only store when these aren't set, so
+# collaborators without S3 access can still run the pipeline.
+use_s3_store <- all(nzchar(Sys.getenv(c("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"))))
+s3_repository <- if (use_s3_store) "aws" else "local"
+s3_resources <- if (use_s3_store) {
+  tar_resources(aws = tar_resources_aws(
+    bucket = Sys.getenv("QCGL_S3_BUCKET", "qcgenomlandscape"),
+    prefix = "targets",
+    region = "us-east-1",
+    endpoint = "https://object-arbutus.alliancecan.ca",
+    # Arbutus's S3 gateway uses path-style bucket addressing
+    # (object-arbutus.alliancecan.ca/BUCKET/KEY), not virtual-hosted-style
+    # (BUCKET.object-arbutus.alliancecan.ca/KEY)
+    s3_force_path_style = TRUE
+  ))
+} else {
+  logger::log_info("AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY not set -- expensive targets use local storage only")
+  tar_resources()
+}
+
 # ---- Dev/test overrides ----------------------------------------------------
 # QCGL_RESULTS_DIR: write sink targets somewhere other than results/, so a
 # test run can never overwrite a real one.
@@ -55,7 +88,17 @@ maybe_upload_to_swift <- function(path, token) {
     warning("Skipping Swift upload of ", path, " (no token)", call. = FALSE)
     return(invisible(NULL))
   }
-  upload_to_swift(path, token = token)
+  # A failed upload (expired token, transient network issue, Arbutus outage,
+  # ...) shouldn't crash a multi-hour tar_make() run over what's meant to be
+  # an optional export step -- same non-fatal treatment as a missing token.
+  # upload_to_swift() already logs the error before this catches it.
+  tryCatch(
+    upload_to_swift(path, token = token),
+    error = function(e) {
+      warning("Skipping Swift upload of ", path, " after failure: ", e$message, call. = FALSE)
+      invisible(NULL)
+    }
+  )
 }
 
 list(
@@ -105,7 +148,11 @@ list(
     ncbi_queries,
     QCGenomLandscape::build_ncbi_queries(bdqc_species, query_primers, batch_size = 25)
   ),
-  tar_target(ncbi_sequences, QCGenomLandscape::fetch_ncbi_sequences(ncbi_queries)),
+  tar_target(
+    ncbi_sequences,
+    QCGenomLandscape::fetch_ncbi_sequences(ncbi_queries),
+    repository = s3_repository, resources = s3_resources
+  ),
   tar_target(ncbi_results_saved, {
     saveRDS(ncbi_sequences$results, file.path(results_dir, "ncbi_results.rds"))
     file.path(results_dir, "ncbi_results.rds")
@@ -202,19 +249,26 @@ list(
     dplyr::filter(!is.na(organism), !is.na(accession)) |>
     dplyr::pull(accession) |>
     unique()),
-  tar_target(gb_records, QCGenomLandscape::fetch_gb_records(qc_accessions)),
-  tar_target(seq_data, {
-    parsed <- purrr::map_dfr(gb_records, QCGenomLandscape::parse_gb_records)
-    dplyr::bind_cols(parsed, QCGenomLandscape::score_sequence_quality(parsed$sequence)) |>
-      dplyr::mutate(has_stop = purrr::map_lgl(sequence, QCGenomLandscape::has_stop_codon_coi))
-  }),
+  tar_target(
+    gb_records,
+    QCGenomLandscape::fetch_gb_records(qc_accessions),
+    repository = s3_repository, resources = s3_resources
+  ),
+  tar_target(
+    seq_data,
+    QCGenomLandscape::build_sequence_qc_table(gb_records),
+    repository = s3_repository, resources = s3_resources
+  ),
   tar_target(seq_qc_saved, {
     saveRDS(seq_data, file.path(results_dir, "sequence_qc.rds"))
     file.path(results_dir, "sequence_qc.rds")
   }, format = "file"),
 
   # ---- 7. Arbutus/Swift export ---------------------------------------------
-  tar_target(swift_token, get_swift_token()),
+  # cue = "always": get_swift_token() has no target-level dependencies, so
+  # targets has no way to notice a cached token has simply expired -- force
+  # a fresh Keystone auth every run instead of reusing a stale one
+  tar_target(swift_token, get_swift_token(), cue = tar_cue(mode = "always")),
   tar_target(bold_swift, maybe_upload_to_swift(bold_saved, swift_token)),
   tar_target(ncbi_results_swift, maybe_upload_to_swift(ncbi_results_saved, swift_token)),
   tar_target(deficient_queries_swift, maybe_upload_to_swift(deficient_queries_saved, swift_token)),

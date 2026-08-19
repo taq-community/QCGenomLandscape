@@ -25,6 +25,7 @@ Imports:
     glue,
     httr2,
     logger,
+    parallel,
     purrr,
     rentrez,
     rlang,
@@ -38,6 +39,7 @@ Imports:
 Suggests:
     knitr,
     mapview,
+    paws.storage,
     pkgdown,
     rmarkdown,
     tarchetypes,
