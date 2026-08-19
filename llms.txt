@@ -226,6 +226,8 @@ méthodologique détaillée.
 - [`build_ncbi_queries()`](https://taq-community.github.io/QCGenomLandscape/reference/build_ncbi_queries.md)
   : Build NCBI search query strings from a BDQC species list and primer
   map
+- [`build_sequence_qc_table()`](https://taq-community.github.io/QCGenomLandscape/reference/build_sequence_qc_table.md)
+  : Build the per-record sequence-QC table from fetched GenBank batches
 - [`build_summary_dataframe()`](https://taq-community.github.io/QCGenomLandscape/reference/build_summary_dataframe.md)
   : Build the per-species genomic-data summary table
 - [`build_summary_dataframe_from_files()`](https://taq-community.github.io/QCGenomLandscape/reference/build_summary_dataframe_from_files.md)
@@ -246,8 +248,7 @@ méthodologique détaillée.
 - [`flag_within_boundary()`](https://taq-community.github.io/QCGenomLandscape/reference/flag_within_boundary.md)
   : Flag points as within a polygon boundary
 - [`has_stop_codon_coi()`](https://taq-community.github.io/QCGenomLandscape/reference/has_stop_codon_coi.md)
-  : Check for in-frame stop codons in a nucleotide sequence (COI / SGC4
-  code)
+  : Check for in-frame stop codons in DNA sequences (COI / SGC4 code)
 - [`load_canvec_boundary()`](https://taq-community.github.io/QCGenomLandscape/reference/load_canvec_boundary.md)
   : Load a CanVec administrative-boundary layer, optionally filtered
 - [`load_risk_status()`](https://taq-community.github.io/QCGenomLandscape/reference/load_risk_status.md)
