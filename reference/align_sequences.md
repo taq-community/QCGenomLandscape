@@ -7,7 +7,7 @@ Thin, namespaced wrapper over
 ## Usage
 
 ``` r
-align_sequences(sequences)
+align_sequences(sequences, verbose = FALSE)
 ```
 
 ## Arguments
@@ -15,6 +15,15 @@ align_sequences(sequences)
 - sequences:
 
   Character vector of DNA sequences
+
+- verbose:
+
+  Logical, print
+  [`DECIPHER::AlignSeqs()`](https://rdrr.io/pkg/DECIPHER/man/AlignSeqs.html)'s
+  progress output, default `FALSE` (it's chatty by default – fine for
+  interactive use, unwanted noise when called many times in a loop, e.g.
+  from
+  [`flag_barcode_gap_outliers()`](https://taq-community.github.io/QCGenomLandscape/reference/flag_barcode_gap_outliers.md))
 
 ## Value
 

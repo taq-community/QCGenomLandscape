@@ -1,9 +1,9 @@
-# Check for in-frame stop codons in DNA sequences (COI / SGC4 code)
+# Flag DNA sequences with no clean reading frame (COI / SGC4 code)
 
 Translates each sequence in all 3 forward reading frames using the
 invertebrate mitochondrial genetic code (NCBI translation table 5 /
-SGC4, the standard code for COI barcoding) and flags whether any frame
-contains a stop codon.
+SGC4, the standard code for COI barcoding), and flags a sequence when
+**none** of the 3 frames translates without hitting a stop codon.
 
 ## Usage
 
@@ -20,9 +20,21 @@ has_stop_codon_coi(seq)
 
 ## Value
 
-Logical vector, the same length as `seq`
+Logical vector, the same length as `seq` – `TRUE` means no reading frame
+translates cleanly (likely problem)
 
 ## Details
+
+This is deliberately *not* "does any frame contain a stop" – for a real
+~650bp protein-coding sequence, a random frame is stop-free with
+probability roughly `(61/64)^~200`, i.e. astronomically small by chance,
+so at least one clean frame exists for essentially every real,
+correctly-oriented sequence. Flagging "a stop exists in some frame" is
+true of ~100% of real sequences checked this way (3 chances for an
+unrelated frame to hit one of 4 stop codons) and isn't discriminating.
+Flagging "no frame is clean" is the rare, meaningful signal instead –
+consistent with a frameshift, NUMT/pseudogene, wrong orientation, or
+sequencing error.
 
 Vectorized over `seq`: all sequences are translated together per frame
 in one
@@ -37,7 +49,7 @@ old per-element scalar version took hours.
 
 ``` r
 has_stop_codon_coi("atgtaaatg")
-#> [1] TRUE
+#> [1] FALSE
 has_stop_codon_coi(c("atgtaaatg", "aaaaaaaaa", NA))
-#> [1]  TRUE FALSE    NA
+#> [1] FALSE FALSE    NA
 ```

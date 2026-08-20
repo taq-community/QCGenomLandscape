@@ -59,6 +59,20 @@
 
         <dt>
 
+          <code><a href="atlas_molecular_datasets.html">atlas_molecular_datasets()</a></code>
+
+        </dt>
+        <dd>The 16 Atlas datasets whose records are already molecular/eDNA-derived</dd>
+
+        <dt>
+
+          <code><a href="build_hex_grid_cells.html">build_hex_grid_cells()</a></code>
+
+        </dt>
+        <dd>Build a full hexagonal grid over a boundary, with stable cell IDs</dd>
+
+        <dt>
+
           <code><a href="build_ncbi_queries.html">build_ncbi_queries()</a></code>
 
         </dt>
@@ -91,6 +105,27 @@
 
         </dt>
         <dd>Classify BDQC taxonomic groups into finer display categories</dd>
+
+        <dt>
+
+          <code><a href="compare_edna_atlas_coverage.html">compare_edna_atlas_coverage()</a></code>
+
+        </dt>
+        <dd>Compare eDNA vs traditional occurrence coverage against the Atlas, on a hex grid</dd>
+
+        <dt>
+
+          <code><a href="extract_edna_occurrences.html">extract_edna_occurrences()</a></code>
+
+        </dt>
+        <dd>Normalize NCBI + BOLD records into a common eDNA occurrence table</dd>
+
+        <dt>
+
+          <code><a href="fetch_atlas_parquet.html">fetch_atlas_parquet()</a></code>
+
+        </dt>
+        <dd>Fetch a Biodiversité Québec Atlas public-data export, caching it locally</dd>
 
         <dt>
 
@@ -129,6 +164,20 @@
 
         <dt>
 
+          <code><a href="flag_barcode_gap_outliers.html">flag_barcode_gap_outliers()</a></code>
+
+        </dt>
+        <dd>Flag DNA sequences whose distance to conspecifics is a group outlier</dd>
+
+        <dt>
+
+          <code><a href="flag_length_outliers.html">flag_length_outliers()</a></code>
+
+        </dt>
+        <dd>Flag sequence-length outliers within each marker/gene group</dd>
+
+        <dt>
+
           <code><a href="flag_within_boundary.html">flag_within_boundary()</a></code>
 
         </dt>
@@ -139,7 +188,14 @@
           <code><a href="has_stop_codon_coi.html">has_stop_codon_coi()</a></code>
 
         </dt>
-        <dd>Check for in-frame stop codons in DNA sequences (COI / SGC4 code)</dd>
+        <dd>Flag DNA sequences with no clean reading frame (COI / SGC4 code)</dd>
+
+        <dt>
+
+          <code><a href="is_complete_genome.html">is_complete_genome()</a></code>
+
+        </dt>
+        <dd>Flag whether a GenBank record's DEFINITION describes a complete genome</dd>
 
         <dt>
 
@@ -164,10 +220,24 @@
 
         <dt>
 
+          <code><a href="parse_bold_coord.html">parse_bold_coord()</a></code>
+
+        </dt>
+        <dd>Parse a BOLD-style <code>coord</code> string into decimal degrees</dd>
+
+        <dt>
+
+          <code><a href="parse_gb_collection_date.html">parse_gb_collection_date()</a></code>
+
+        </dt>
+        <dd>Parse a GenBank/BOLD-style collection-date string into a <code>Date</code></dd>
+
+        <dt>
+
           <code><a href="parse_gb_records.html">parse_gb_records()</a></code>
 
         </dt>
-        <dd>Parse accession/gene/sequence out of GenBank flat-file text</dd>
+        <dd>Parse accession/definition/gene/sequence out of GenBank flat-file text</dd>
 
         <dt>
 
@@ -203,6 +273,13 @@
 
         </dt>
         <dd>Compute basic sequence-quality metrics</dd>
+
+        <dt>
+
+          <code><a href="summarize_edna_contribution.html">summarize_edna_contribution()</a></code>
+
+        </dt>
+        <dd>Summarize an eDNA-vs-traditional coverage comparison into contribution metrics</dd>
 
         <dt>
 

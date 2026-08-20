@@ -60,20 +60,37 @@ and <code>taxon_representation.R</code> (descriptive <code>rRNA</code>/photosynt
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>Character vector, one of <code>"COI"</code>, <code>"Cytb"</code>, <code>"ND1"</code>, <code>"ND2"</code>,
-<code>"ND4"</code>, <code>"ND5"</code>, <code>"12S rRNA"</code>, <code>"16S rRNA"</code>, <code>"Nuclear rRNA / ITS"</code>,
-<code>"Photosynthesis-related (rbcL, matK, etc.)"</code>, <code>"Other"</code>, or <code>NA</code> if
-<code>gene</code> is <code>NA</code></p>
+    <p>Character vector, one of <code>"COI"</code>, <code>"COII"</code>, <code>"COIII"</code>, <code>"Cytb"</code>,
+<code>"ND1"</code>, <code>"ND2"</code>, <code>"ND3"</code>, <code>"ND4"</code>, <code>"ND4L"</code>, <code>"ND5"</code>, <code>"ND6"</code>,
+<code>"ATP6"</code>, <code>"ATP8"</code>, <code>"12S rRNA"</code>, <code>"16S rRNA"</code>, <code>"Nuclear rRNA / ITS"</code>,
+<code>"Fungal protein-coding (RPB1/RPB2, TEF1)"</code>,
+<code>"Photosynthesis-related (rbcL, matK, etc.)"</code>,
+<code>"Multi-gene / genome-scale record"</code>, <code>"Other"</code>, or <code>NA</code> if <code>gene</code> is <code>NA</code></p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>A <code>;</code>-joined list of several gene names (e.g. all 13 mitochondrial
+protein-coding genes annotated together on one GenBank record) is
+classified as <code>"Multi-gene / genome-scale record"</code> before any of the
+single-marker patterns are tried – a full mitogenome isn't comparable to
+a short single-marker fragment (can't be meaningfully aligned against
+one, wildly different expected length, etc.), so grouping it with actual
+single-COI-marker records under a shared label would be misleading for
+anything downstream that treats <code>gene_group</code> as "same kind of sequence"
+(e.g. <code><a href="flag_length_outliers.html">flag_length_outliers()</a></code>, <code><a href="flag_barcode_gap_outliers.html">flag_barcode_gap_outliers()</a></code>).</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">assign_gene_group</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"COX1"</span>, <span class="st">"cytb"</span>, <span class="st">"12S"</span>, <span class="st">"rbcL"</span>, <span class="st">"xyz123"</span><span class="op">)</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">assign_gene_group</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"COX1"</span>, <span class="st">"cytb"</span>, <span class="st">"12S"</span>, <span class="st">"rbcL"</span>, <span class="st">"trnL"</span>, <span class="st">"xyz123"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "COI"                                      </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [2] "Cytb"                                     </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [3] "12S rRNA"                                 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [4] "Photosynthesis-related (rbcL, matK, etc.)"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [5] "Other"                                    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [5] "Photosynthesis-related (rbcL, matK, etc.)"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [6] "Other"                                    </span>
+<span class="r-in"><span><span class="fu">assign_gene_group</span><span class="op">(</span><span class="st">"ND1;ND2;COX1;COX2;ATP8;ATP6;COX3;ND3;ND4L;ND4;ND5;ND6;CYTB"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Multi-gene / genome-scale record"</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

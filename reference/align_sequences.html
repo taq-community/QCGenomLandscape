@@ -44,7 +44,7 @@ DECIPHER::AlignSeqs()."></head><body>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">align_sequences</span><span class="op">(</span><span class="va">sequences</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">align_sequences</span><span class="op">(</span><span class="va">sequences</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -53,6 +53,13 @@ DECIPHER::AlignSeqs()."></head><body>
 
 <dl><dt id="arg-sequences">sequences<a class="anchor" aria-label="anchor" href="#arg-sequences"></a></dt>
 <dd><p>Character vector of DNA sequences</p></dd>
+
+
+<dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
+<dd><p>Logical, print <code><a href="https://rdrr.io/pkg/DECIPHER/man/AlignSeqs.html" class="external-link">DECIPHER::AlignSeqs()</a></code>'s progress output,
+default <code>FALSE</code> (it's chatty by default – fine for interactive use,
+unwanted noise when called many times in a loop, e.g. from
+<code><a href="flag_barcode_gap_outliers.html">flag_barcode_gap_outliers()</a></code>)</p></dd>
 
 </dl></div>
     <div class="section level2">

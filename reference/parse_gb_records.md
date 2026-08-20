@@ -1,6 +1,6 @@
-# Parse accession/gene/sequence out of GenBank flat-file text
+# Parse accession/definition/gene/sequence out of GenBank flat-file text
 
-Parse accession/gene/sequence out of GenBank flat-file text
+Parse accession/definition/gene/sequence out of GenBank flat-file text
 
 ## Usage
 
@@ -17,6 +17,9 @@ parse_gb_records(gb_text)
 
 ## Value
 
-Tibble with columns `accession`, `gene` (`;`-separated if a record has
-multiple `/gene=` tags), `sequence` (lowercase-normalized `acgt` only,
-`NA` if the record has no `ORIGIN` block)
+Tibble with columns `accession`, `definition` (the GenBank `DEFINITION`
+field, whitespace-collapsed to one line – see
+[`is_complete_genome()`](https://taq-community.github.io/QCGenomLandscape/reference/is_complete_genome.md)),
+`gene` (`;`-separated if a record has multiple `/gene=` tags),
+`sequence` (lowercase-normalized `acgt` only, `NA` if the record has no
+`ORIGIN` block)

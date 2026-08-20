@@ -50,8 +50,12 @@ build_sequence_qc_table(
 
 ## Value
 
-Tibble with columns `accession`, `gene`, `sequence`, `seq_length`,
-`n_count`, `n_pct`, `gc_pct`, `has_stop`
+Tibble with columns `accession`, `definition`, `gene`, `sequence`,
+`seq_length`, `n_count`, `n_pct`, `gc_pct`, `has_stop`,
+`is_complete_genome` (see
+[`is_complete_genome()`](https://taq-community.github.io/QCGenomLandscape/reference/is_complete_genome.md)
+– GenBank's own "complete genome" wording, not inferred from the gene
+count)
 
 ## Details
 
