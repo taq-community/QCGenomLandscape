@@ -31,8 +31,10 @@ own copy of the batch text and this step has previously run under heavy
 memory pressure.}
 }
 \value{
-Tibble with columns \code{accession}, \code{gene}, \code{sequence}, \code{seq_length},
-\code{n_count}, \code{n_pct}, \code{gc_pct}, \code{has_stop}
+Tibble with columns \code{accession}, \code{definition}, \code{gene}, \code{sequence},
+\code{seq_length}, \code{n_count}, \code{n_pct}, \code{gc_pct}, \code{has_stop},
+\code{is_complete_genome} (see \code{\link[=is_complete_genome]{is_complete_genome()}} -- GenBank's own
+"complete genome" wording, not inferred from the gene count)
 }
 \description{
 Parses raw GenBank flat-file batches, scores basic sequence-quality

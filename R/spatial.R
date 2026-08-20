@@ -40,6 +40,64 @@ flag_within_boundary <- function(points_sf, boundary_sf, flag_name = "in_boundar
   points_sf
 }
 
+#' Normalize NCBI + BOLD records into a common eDNA occurrence table
+#'
+#' Pulls the fields needed to compare eDNA records against traditional
+#' occurrence data (e.g. the Biodiversité Québec Atlas) spatio-temporally:
+#' one row per geo-referenced eDNA record, with species, coordinates, and
+#' collection date normalized to a common shape regardless of source.
+#' Records with no parseable coordinates, or no species name, are dropped --
+#' both sources have some (BOLD: unidentified specimens; NCBI: missing
+#' `lat_lon`).
+#'
+#' @param ncbi_results Tibble as returned by [fetch_ncbi_sequences()]'s
+#'   `results` (must have `organism`, `lat_lon`, `collection_date`,
+#'   `accession` columns)
+#' @param bold_raw Character scalar, raw BOLD TSV as returned by
+#'   [fetch_bold_sequences()]
+#' @return Tibble with columns `source` (`"NCBI"`/`"BOLD"`), `species`,
+#'   `lon`, `lat`, `date` (`Date`, `NA` where uncollectable), `record_id`
+#' @export
+extract_edna_occurrences <- function(ncbi_results, bold_raw) {
+  ncbi_occ <- ncbi_results |>
+    dplyr::filter(!is.na(organism), !is.na(lat_lon)) |>
+    dplyr::mutate(parsed = purrr::map(lat_lon, parse_latlon)) |>
+    dplyr::transmute(
+      source = "NCBI",
+      species = organism,
+      lon = purrr::map_dbl(parsed, "lon"),
+      lat = purrr::map_dbl(parsed, "lat"),
+      date = parse_gb_collection_date(collection_date),
+      record_id = accession
+    ) |>
+    dplyr::filter(!is.na(lon), !is.na(lat))
+
+  bold_df <- readr::read_tsv(
+    I(bold_raw),
+    col_types = readr::cols_only(
+      species = readr::col_character(),
+      coord = readr::col_character(),
+      collection_date_start = readr::col_character(),
+      record_id = readr::col_character()
+    ),
+    progress = FALSE
+  )
+  bold_occ <- bold_df |>
+    dplyr::filter(!is.na(species), species != "", !is.na(coord)) |>
+    dplyr::mutate(parsed = purrr::map(coord, parse_bold_coord)) |>
+    dplyr::transmute(
+      source = "BOLD",
+      species,
+      lon = purrr::map_dbl(parsed, "lon"),
+      lat = purrr::map_dbl(parsed, "lat"),
+      date = parse_gb_collection_date(collection_date_start),
+      record_id = record_id
+    ) |>
+    dplyr::filter(!is.na(lon), !is.na(lat))
+
+  dplyr::bind_rows(ncbi_occ, bold_occ)
+}
+
 #' Build a hexagonal summary grid of point counts within a boundary
 #'
 #' @param points_sf `sf` points object (any CRS)

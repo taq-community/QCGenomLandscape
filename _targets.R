@@ -4,6 +4,12 @@ library(QCGenomLandscape)
 
 tar_option_set(
   packages = c("QCGenomLandscape", "sf", "Biostrings"),
+  # packages = just attaches namespaces; imports = is the separate option
+  # that actually tracks QCGenomLandscape's function bodies for invalidation
+  # -- without it, targets never notices when R/ code changes and silently
+  # keeps stale cached results (how ncbi_queries/ncbi_sequences stayed on
+  # the pre-merge voucher-only query for weeks after the code changed).
+  imports = "QCGenomLandscape",
   format = "rds"
 )
 

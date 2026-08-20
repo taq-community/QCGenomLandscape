@@ -93,13 +93,15 @@ fetch_gb_records <- function(accessions, batch_size = 50,
   purrr::compact(results)
 }
 
-#' Parse accession/gene/sequence out of GenBank flat-file text
+#' Parse accession/definition/gene/sequence out of GenBank flat-file text
 #'
 #' @param gb_text Character scalar containing one or more `"//"`-delimited
 #'   GenBank flat-file records
-#' @return Tibble with columns `accession`, `gene` (`;`-separated if a record
-#'   has multiple `/gene=` tags), `sequence` (lowercase-normalized `acgt` only,
-#'   `NA` if the record has no `ORIGIN` block)
+#' @return Tibble with columns `accession`, `definition` (the GenBank
+#'   `DEFINITION` field, whitespace-collapsed to one line -- see
+#'   [is_complete_genome()]), `gene` (`;`-separated if a record has multiple
+#'   `/gene=` tags), `sequence` (lowercase-normalized `acgt` only, `NA` if
+#'   the record has no `ORIGIN` block)
 #' @export
 parse_gb_records <- function(gb_text) {
   # Split into individual records at the "//" delimiter
@@ -109,6 +111,15 @@ parse_gb_records <- function(gb_text) {
   purrr::map_dfr(records, \(rec) {
     accession <- regmatches(rec, regexpr("(?m)^ACCESSION\\s+(\\S+)", rec, perl = TRUE))
     accession <- if (length(accession)) sub("ACCESSION\\s+", "", accession) else NA_character_
+
+    # DEFINITION can wrap onto indented continuation lines -- capture up to
+    # (not including) the next line that starts a new field at column 1
+    definition <- regmatches(rec, regexpr("(?ms)^DEFINITION\\s+(.*?)(?=\\n\\S)", rec, perl = TRUE))
+    definition <- if (length(definition)) {
+      trimws(gsub("\\s+", " ", sub("^DEFINITION\\s+", "", definition)))
+    } else {
+      NA_character_
+    }
 
     # Extract gene names from /gene="..." tags
     gene_matches <- regmatches(rec, gregexpr('/gene="([^"]+)"', rec, perl = TRUE))[[1]]
@@ -126,6 +137,35 @@ parse_gb_records <- function(gb_text) {
       NA_character_
     }
 
-    tibble::tibble(accession = accession, gene = gene, sequence = sequence)
+    tibble::tibble(accession = accession, definition = definition, gene = gene, sequence = sequence)
   })
+}
+
+#' Flag whether a GenBank record's DEFINITION describes a complete genome
+#'
+#' GenBank distinguishes `"complete genome"` from `"partial genome"` in its
+#' own DEFINITION wording (e.g. `"Boreogadus saida ... mitochondrion,
+#' complete genome."` vs `"... mitochondrion, partial genome."`) -- the
+#' authoritative signal for "is this a full genome", direct from the
+#' submitter, rather than inferring it from how many `/gene=` tags happen to
+#' be annotated on the record (a multi-gene *fragment* spanning just two
+#' adjacent genes would also have multiple tags without being anywhere near
+#' a full genome).
+#'
+#' @param definition Character vector, e.g. [parse_gb_records()]'s
+#'   `definition` column
+#' @return Logical vector, same length as `definition`; `NA` where
+#'   `definition` is `NA`
+#' @examples
+#' is_complete_genome(c(
+#'   "Boreogadus saida mitochondrion, complete genome.",
+#'   "Boreogadus saida mitochondrion, partial genome.",
+#'   "Boreogadus saida cytochrome oxidase subunit I (COI) gene, partial cds."
+#' ))
+#' @export
+is_complete_genome <- function(definition) {
+  # grepl() silently returns FALSE (not NA) for NA input -- "unknown, no
+  # definition text" and "confirmed not a complete genome" aren't the same
+  # claim, so NA is preserved explicitly rather than inheriting that default
+  ifelse(is.na(definition), NA, grepl("complete genome", definition, ignore.case = TRUE))
 }

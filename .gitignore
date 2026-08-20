@@ -1,4 +1,7 @@
 /.quarto/
+*_cache/
+*_files/
+portrait-genomique-bdqc.html
 
 # R files
 .Rproj.user
@@ -31,3 +34,7 @@ inst/doc
 # targets pipeline store
 _targets/
 docs
+
+**/*.quarto_ipynb
+*.qmd
+results/*.rds

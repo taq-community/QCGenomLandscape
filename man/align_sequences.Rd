@@ -4,10 +4,15 @@
 \alias{align_sequences}
 \title{Align a set of DNA sequences}
 \usage{
-align_sequences(sequences)
+align_sequences(sequences, verbose = FALSE)
 }
 \arguments{
 \item{sequences}{Character vector of DNA sequences}
+
+\item{verbose}{Logical, print \code{DECIPHER::AlignSeqs()}'s progress output,
+default \code{FALSE} (it's chatty by default -- fine for interactive use,
+unwanted noise when called many times in a loop, e.g. from
+\code{\link[=flag_barcode_gap_outliers]{flag_barcode_gap_outliers()}})}
 }
 \value{
 A \code{Biostrings::DNAStringSet} of aligned sequences

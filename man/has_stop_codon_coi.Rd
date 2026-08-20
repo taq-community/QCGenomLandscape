@@ -2,7 +2,7 @@
 % Please edit documentation in R/sequence_qc.R
 \name{has_stop_codon_coi}
 \alias{has_stop_codon_coi}
-\title{Check for in-frame stop codons in DNA sequences (COI / SGC4 code)}
+\title{Flag DNA sequences with no clean reading frame (COI / SGC4 code)}
 \usage{
 has_stop_codon_coi(seq)
 }
@@ -11,15 +11,27 @@ has_stop_codon_coi(seq)
 elements return \code{NA}}
 }
 \value{
-Logical vector, the same length as \code{seq}
+Logical vector, the same length as \code{seq} -- \code{TRUE} means no
+reading frame translates cleanly (likely problem)
 }
 \description{
 Translates each sequence in all 3 forward reading frames using the
 invertebrate mitochondrial genetic code (NCBI translation table 5 / SGC4,
-the standard code for COI barcoding) and flags whether any frame contains
-a stop codon.
+the standard code for COI barcoding), and flags a sequence when \strong{none}
+of the 3 frames translates without hitting a stop codon.
 }
 \details{
+This is deliberately \emph{not} "does any frame contain a stop" -- for a real
+~650bp protein-coding sequence, a random frame is stop-free with
+probability roughly \code{(61/64)^~200}, i.e. astronomically small by chance,
+so at least one clean frame exists for essentially every real,
+correctly-oriented sequence. Flagging "a stop exists in some frame" is
+true of ~100\% of real sequences checked this way (3 chances for an
+unrelated frame to hit one of 4 stop codons) and isn't discriminating.
+Flagging "no frame is clean" is the rare, meaningful signal instead --
+consistent with a frameshift, NUMT/pseudogene, wrong orientation, or
+sequencing error.
+
 Vectorized over \code{seq}: all sequences are translated together per frame in
 one \code{Biostrings::translate()} call (3 calls total) instead of looping
 element by element and re-deriving the genetic code table each time. This

@@ -2,7 +2,7 @@
 % Please edit documentation in R/genbank.R
 \name{parse_gb_records}
 \alias{parse_gb_records}
-\title{Parse accession/gene/sequence out of GenBank flat-file text}
+\title{Parse accession/definition/gene/sequence out of GenBank flat-file text}
 \usage{
 parse_gb_records(gb_text)
 }
@@ -11,10 +11,12 @@ parse_gb_records(gb_text)
 GenBank flat-file records}
 }
 \value{
-Tibble with columns \code{accession}, \code{gene} (\verb{;}-separated if a record
-has multiple \verb{/gene=} tags), \code{sequence} (lowercase-normalized \code{acgt} only,
-\code{NA} if the record has no \code{ORIGIN} block)
+Tibble with columns \code{accession}, \code{definition} (the GenBank
+\code{DEFINITION} field, whitespace-collapsed to one line -- see
+\code{\link[=is_complete_genome]{is_complete_genome()}}), \code{gene} (\verb{;}-separated if a record has multiple
+\verb{/gene=} tags), \code{sequence} (lowercase-normalized \code{acgt} only, \code{NA} if
+the record has no \code{ORIGIN} block)
 }
 \description{
-Parse accession/gene/sequence out of GenBank flat-file text
+Parse accession/definition/gene/sequence out of GenBank flat-file text
 }

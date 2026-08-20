@@ -10,16 +10,30 @@ assign_gene_group(gene)
 \item{gene}{Character vector of raw gene names (e.g. \code{"COX1"}, \code{"cytb"})}
 }
 \value{
-Character vector, one of \code{"COI"}, \code{"Cytb"}, \code{"ND1"}, \code{"ND2"},
-\code{"ND4"}, \code{"ND5"}, \code{"12S rRNA"}, \code{"16S rRNA"}, \code{"Nuclear rRNA / ITS"},
-\code{"Photosynthesis-related (rbcL, matK, etc.)"}, \code{"Other"}, or \code{NA} if
-\code{gene} is \code{NA}
+Character vector, one of \code{"COI"}, \code{"COII"}, \code{"COIII"}, \code{"Cytb"},
+\code{"ND1"}, \code{"ND2"}, \code{"ND3"}, \code{"ND4"}, \code{"ND4L"}, \code{"ND5"}, \code{"ND6"},
+\code{"ATP6"}, \code{"ATP8"}, \code{"12S rRNA"}, \code{"16S rRNA"}, \code{"Nuclear rRNA / ITS"},
+\code{"Fungal protein-coding (RPB1/RPB2, TEF1)"},
+\code{"Photosynthesis-related (rbcL, matK, etc.)"},
+\code{"Multi-gene / genome-scale record"}, \code{"Other"}, or \code{NA} if \code{gene} is \code{NA}
 }
 \description{
 Unifies the two gene-classification rule sets that previously diverged
 between \code{create_dataframe.R} (short labels, \code{Cytb}/\code{ND1}/\code{ND2}/\code{ND4}/\code{ND5})
 and \code{taxon_representation.R} (descriptive \code{rRNA}/photosynthesis labels).
 }
+\details{
+A \verb{;}-joined list of several gene names (e.g. all 13 mitochondrial
+protein-coding genes annotated together on one GenBank record) is
+classified as \code{"Multi-gene / genome-scale record"} before any of the
+single-marker patterns are tried -- a full mitogenome isn't comparable to
+a short single-marker fragment (can't be meaningfully aligned against
+one, wildly different expected length, etc.), so grouping it with actual
+single-COI-marker records under a shared label would be misleading for
+anything downstream that treats \code{gene_group} as "same kind of sequence"
+(e.g. \code{\link[=flag_length_outliers]{flag_length_outliers()}}, \code{\link[=flag_barcode_gap_outliers]{flag_barcode_gap_outliers()}}).
+}
 \examples{
-assign_gene_group(c("COX1", "cytb", "12S", "rbcL", "xyz123"))
+assign_gene_group(c("COX1", "cytb", "12S", "rbcL", "trnL", "xyz123"))
+assign_gene_group("ND1;ND2;COX1;COX2;ATP8;ATP6;COX3;ND3;ND4L;ND4;ND5;ND6;CYTB")
 }

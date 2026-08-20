@@ -16,3 +16,7 @@
 ^pkgdown$
 ^vignettes/report\.Rmd\.orig$
 ^vignettes/precompile\.R$
+^portrait-genomique-bdqc\.qmd$
+^portrait-genomique-bdqc\.html$
+^portrait-genomique-bdqc_cache$
+^portrait-genomique-bdqc_files$

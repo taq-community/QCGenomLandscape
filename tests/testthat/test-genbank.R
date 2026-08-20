@@ -10,6 +10,53 @@ test_that("parse_gb_records parses accession, gene, and sequence per record", {
   expect_equal(parsed$accession, c("ABC123", "DEF456", "GHI789"))
 })
 
+test_that("parse_gb_records extracts a single-line DEFINITION", {
+  gb_text <- paste(
+    readLines(testthat::test_path("fixtures", "sample_genbank_record.gb")),
+    collapse = "\n"
+  )
+
+  parsed <- parse_gb_records(gb_text)
+
+  expect_equal(parsed$definition, c(
+    "Test species mitochondrial COI gene, single gene tag.",
+    "Test species with two distinct gene tags.",
+    "Test species without a sequence (no ORIGIN block)."
+  ))
+})
+
+test_that("parse_gb_records unwraps a DEFINITION that spans indented continuation lines", {
+  gb_text <- paste(
+    "LOCUS       XYZ999               16746 bp    DNA     circular VRT 18-DEC-2019",
+    "DEFINITION  Boreogadus saida voucher UW151986-5 mitochondrion,",
+    "            complete genome.",
+    "ACCESSION   XYZ999",
+    "VERSION     XYZ999.1",
+    "FEATURES             Location/Qualifiers",
+    "     gene            1..10",
+    "                     /gene=\"COI\"",
+    "ORIGIN",
+    "        1 acgtacgtac",
+    "//",
+    sep = "\n"
+  )
+
+  parsed <- parse_gb_records(gb_text)
+
+  expect_equal(parsed$definition, "Boreogadus saida voucher UW151986-5 mitochondrion, complete genome.")
+})
+
+test_that("is_complete_genome matches GenBank's own 'complete genome' wording, not 'partial genome'", {
+  out <- is_complete_genome(c(
+    "Boreogadus saida mitochondrion, complete genome.",
+    "Boreogadus saida mitochondrion, partial genome.",
+    "Boreogadus saida cytochrome oxidase subunit I (COI) gene, partial cds.",
+    NA
+  ))
+
+  expect_equal(out, c(TRUE, FALSE, FALSE, NA))
+})
+
 test_that("parse_gb_records de-duplicates repeated /gene= tags within a record", {
   gb_text <- paste(
     readLines(testthat::test_path("fixtures", "sample_genbank_record.gb")),

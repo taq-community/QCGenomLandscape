@@ -27,6 +27,7 @@ Imports:
     logger,
     parallel,
     purrr,
+    readr,
     rentrez,
     rlang,
     sf,
@@ -37,10 +38,14 @@ Imports:
     utils,
     xml2
 Suggests:
+    DBI,
+    duckdb,
     knitr,
+    lme4,
     mapview,
     paws.storage,
     pkgdown,
+    quarto,
     rmarkdown,
     tarchetypes,
     targets,
