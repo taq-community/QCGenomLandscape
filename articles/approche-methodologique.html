@@ -210,7 +210,38 @@ conservation). <code><a href="../reference/plot_gene_prevalence.html">plot_gene_
 couverture.</p>
 </div>
 <div class="section level3">
-<h3 id="export-vers-arbutus-swift">8. Export vers Arbutus (Swift)<a class="anchor" aria-label="anchor" href="#export-vers-arbutus-swift"></a>
+<h3 id="description-des-marqueurs">8. Description des marqueurs<a class="anchor" aria-label="anchor" href="#description-des-marqueurs"></a>
+</h3>
+<p>Le marqueur génétique de chaque enregistrement NCBI est extrait de la
+chaîne de requête Entrez (tout ce qui suit <code>AND</code> dans la
+colonne <code>query</code>), puis joint à la table de correspondance
+<code>primers_map_group_bdqc_list_01122025.csv</code> pour obtenir des
+libellés lisibles. Certains groupes taxonomiques partagent la même
+requête (p. ex., Oiseaux / Poissons / Mammifères / Reptiles utilisent
+tous <code>COI+12S+16S+cytb</code>) : la table d’amorces est préagrégée
+par <code>query_marker</code> avant la jointure pour éviter les
+doublons.</p>
+<p>La cible <code>marker_stats</code> produit une ligne par
+requête-marqueur unique avec : nombre de séquences, nombre d’espèces,
+médiane/SD/Q25/Q75 de la longueur de séquence (<code>slen</code>).</p>
+</div>
+<div class="section level3">
+<h3 id="variabilité-intra-spécifique-des-séquences">9. Variabilité intra-spécifique des séquences<a class="anchor" aria-label="anchor" href="#variabilit%C3%A9-intra-sp%C3%A9cifique-des-s%C3%A9quences"></a>
+</h3>
+<p>Pour chaque paire (espèce × marqueur) comportant plus d’un
+enregistrement, la cible <code>intraspecific_variation</code> calcule le
+coefficient de variation (CV = SD / médiane × 100) de la longueur des
+séquences (<code>slen</code>). Un CV élevé signale des séquences de
+longueurs disparates pour le même espèce et le même marqueur —
+indicateur probable de qualité moindre, d’amplicons mixtes ou de
+soumissions hétérogènes.</p>
+<p>Les séquences de taille &gt; 10 000 pb sont exclues avant le calcul :
+les génomes complets et mitogenomes renvoyés par les requêtes de gènes
+(p. ex., <code>COI[Gene]</code> retourne aussi les mitogenomes ~15–17
+kb) gonflent le CV de façon non informative.</p>
+</div>
+<div class="section level3">
+<h3 id="export-vers-arbutus-swift">10. Export vers Arbutus (Swift)<a class="anchor" aria-label="anchor" href="#export-vers-arbutus-swift"></a>
 </h3>
 <p>Chaque livrable est optionnellement copié vers le conteneur Arbutus
 (Alliance de recherche numérique du Canada) via
@@ -254,6 +285,16 @@ titre)</td>
 <tr class="odd">
 <td><code>results/sequence_qc.rds</code></td>
 <td>Métriques de qualité de séquence + détection de codons stop</td>
+</tr>
+<tr class="even">
+<td><code>results/marker_stats.rds</code></td>
+<td>Description des marqueurs : séquences, espèces, distribution des
+longueurs par groupe</td>
+</tr>
+<tr class="odd">
+<td><code>results/intraspecific_variation.rds</code></td>
+<td>Variabilité intra-spécifique des longueurs (CV) par paire espèce ×
+marqueur</td>
 </tr>
 <tr class="even">
 <td><code>results/genes_prevalence.svg</code></td>

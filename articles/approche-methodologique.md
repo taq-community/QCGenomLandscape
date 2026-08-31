@@ -112,7 +112,36 @@ et
 [`plot_risk_status_coverage()`](https://taq-community.github.io/QCGenomLandscape/reference/plot_risk_status_coverage.md)
 produisent les figures de couverture.
 
-### 8. Export vers Arbutus (Swift)
+### 8. Description des marqueurs
+
+Le marqueur génétique de chaque enregistrement NCBI est extrait de la
+chaîne de requête Entrez (tout ce qui suit `AND` dans la colonne
+`query`), puis joint à la table de correspondance
+`primers_map_group_bdqc_list_01122025.csv` pour obtenir des libellés
+lisibles. Certains groupes taxonomiques partagent la même requête
+(p. ex., Oiseaux / Poissons / Mammifères / Reptiles utilisent tous
+`COI+12S+16S+cytb`) : la table d’amorces est préagrégée par
+`query_marker` avant la jointure pour éviter les doublons.
+
+La cible `marker_stats` produit une ligne par requête-marqueur unique
+avec : nombre de séquences, nombre d’espèces, médiane/SD/Q25/Q75 de la
+longueur de séquence (`slen`).
+
+### 9. Variabilité intra-spécifique des séquences
+
+Pour chaque paire (espèce × marqueur) comportant plus d’un
+enregistrement, la cible `intraspecific_variation` calcule le
+coefficient de variation (CV = SD / médiane × 100) de la longueur des
+séquences (`slen`). Un CV élevé signale des séquences de longueurs
+disparates pour le même espèce et le même marqueur — indicateur probable
+de qualité moindre, d’amplicons mixtes ou de soumissions hétérogènes.
+
+Les séquences de taille \> 10 000 pb sont exclues avant le calcul : les
+génomes complets et mitogenomes renvoyés par les requêtes de gènes
+(p. ex., `COI[Gene]` retourne aussi les mitogenomes ~15–17 kb) gonflent
+le CV de façon non informative.
+
+### 10. Export vers Arbutus (Swift)
 
 Chaque livrable est optionnellement copié vers le conteneur Arbutus
 (Alliance de recherche numérique du Canada) via
@@ -132,6 +161,8 @@ pipeline s’exécute normalement.
 | `results/ncbi_genome_results.rds` | Génomes complets (nucléaires/mitochondriaux) par espèce |
 | `results/genes_subsamp_50_df.rds` | Annotations géniques (sous-échantillon) |
 | `results/sequence_qc.rds` | Métriques de qualité de séquence + détection de codons stop |
+| `results/marker_stats.rds` | Description des marqueurs : séquences, espèces, distribution des longueurs par groupe |
+| `results/intraspecific_variation.rds` | Variabilité intra-spécifique des longueurs (CV) par paire espèce × marqueur |
 | `results/genes_prevalence.svg` | Prévalence des marqueurs géniques par groupe taxonomique |
 | `results/risk_status_coverage.svg` | Couverture génomique par statut de conservation (Québec) |
 
