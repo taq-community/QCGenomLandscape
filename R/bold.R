@@ -22,7 +22,7 @@ fetch_bold_sequences <- function(query = "geo:province/state:Quebec",
   logger::log_info("BOLD query_id {query_id} -- downloading TSV...")
 
   download_request <- request_fn(
-    glue::glue("https://portal.boldsystems.org/api/documents/{query_id}/download")
+    paste0("https://portal.boldsystems.org/api/documents/", query_id, "/download")
   ) |>
     httr2::req_url_query(format = "tsv") |>
     httr2::req_perform()

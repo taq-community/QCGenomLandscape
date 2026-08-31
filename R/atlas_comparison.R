@@ -140,6 +140,9 @@ build_hex_grid_cells <- function(boundary_sf, cellsize = 10000, crs_proj = 3347)
 #'   (default) to open and close a temporary one; injectable for testing
 #' @return A list with `edna_agg` and `traditional_agg` tibbles, each with
 #'   columns `species`, `cell_id`, `year_obs`, `n`
+#' @details Requires the DuckDB `httpfs` and `spatial` extensions. Install them
+#'   once with `duckdb::duckdb_install_extension(c("httpfs", "spatial"))` before
+#'   first use.
 #' @export
 compare_edna_atlas_coverage <- function(atlas_parquet_path,
                                          hex_grid,
@@ -156,8 +159,8 @@ compare_edna_atlas_coverage <- function(atlas_parquet_path,
     con <- DBI::dbConnect(duckdb::duckdb())
     on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
   }
-  DBI::dbExecute(con, "INSTALL httpfs; LOAD httpfs;")
-  DBI::dbExecute(con, "INSTALL spatial; LOAD spatial;")
+  DBI::dbExecute(con, "LOAD httpfs;")
+  DBI::dbExecute(con, "LOAD spatial;")
 
   hex_gpkg <- tempfile(fileext = ".gpkg")
   on.exit(unlink(hex_gpkg), add = TRUE)

@@ -29,9 +29,8 @@ build_ncbi_queries <- function(species_df, query_primers, batch_size = 1) {
 
   if (batch_size <= 1) {
     return(
-      glue::glue("{joined$species}[Organism] AND {joined$query_marker}") |>
-        unique() |>
-        as.character()
+      paste0(joined$species, "[Organism] AND ", joined$query_marker) |>
+        unique()
     )
   }
 
@@ -39,7 +38,7 @@ build_ncbi_queries <- function(species_df, query_primers, batch_size = 1) {
     dplyr::group_by(query_marker) |>
     dplyr::group_map(function(rows, key) {
       purrr::map_chr(chunk_species(rows$species, batch_size), function(sp) {
-        as.character(glue::glue("{build_organism_clause(sp)} AND {key$query_marker}"))
+        paste0(build_organism_clause(sp), " AND ", key$query_marker)
       })
     }) |>
     unlist() |>
@@ -219,7 +218,7 @@ fetch_ncbi_sequences <- function(queries,
   if (nrow(results) > 0) {
     results <- results |>
       dplyr::mutate(is_voucher = dplyr::coalesce(
-        stringr::str_detect(title, stringr::regex("voucher", ignore_case = TRUE)),
+        grepl("voucher", title, ignore.case = TRUE),
         FALSE
       ))
   }

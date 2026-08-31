@@ -14,11 +14,11 @@ parse_latlon <- function(latlon_string) {
   }
 
   # Extract all numbers (including decimals)
-  numbers <- stringr::str_extract_all(latlon_string, "\\d+\\.?\\d*")[[1]]
+  numbers <- regmatches(latlon_string, gregexpr("\\d+\\.?\\d*", latlon_string))[[1]]
 
   # Extract cardinal directions
-  has_S <- stringr::str_detect(latlon_string, "S")
-  has_W <- stringr::str_detect(latlon_string, "W")
+  has_S <- grepl("S", latlon_string, fixed = TRUE)
+  has_W <- grepl("W", latlon_string, fixed = TRUE)
 
   if (length(numbers) < 2) {
     return(list(lat = NA_real_, lon = NA_real_))
@@ -49,7 +49,7 @@ parse_bold_coord <- function(coord_string) {
     return(list(lat = NA_real_, lon = NA_real_))
   }
 
-  numbers <- stringr::str_extract_all(coord_string, "-?\\d+\\.?\\d*")[[1]]
+  numbers <- regmatches(coord_string, gregexpr("-?\\d+\\.?\\d*", coord_string))[[1]]
   if (length(numbers) != 2) {
     return(list(lat = NA_real_, lon = NA_real_))
   }
