@@ -283,5 +283,80 @@ list(
   tar_target(genes_swift, maybe_upload_to_swift(genes_saved, swift_token)),
   tar_target(gene_prevalence_swift, maybe_upload_to_swift(gene_prevalence_saved, swift_token)),
   tar_target(risk_status_swift, maybe_upload_to_swift(risk_status_saved, swift_token)),
-  tar_target(seq_qc_swift, maybe_upload_to_swift(seq_qc_saved, swift_token))
+  tar_target(seq_qc_swift, maybe_upload_to_swift(seq_qc_saved, swift_token)),
+
+  # ---- 8. Marker data description ------------------------------------------
+  # Extract the query_marker string (everything after " AND " in the Entrez
+  # query) to identify which marker group each record belongs to, then join
+  # back to query_primers for human-readable labels.
+  #
+  # Some groups share the same query_marker (Birds/Fish/Mammals/Reptiles all
+  # use the same COI+12S+16S+cytb query; Conifers/Other plants share the
+  # rbcL+matK+ITS+trnL query). Pre-aggregate to one row per query_marker so
+  # the left_join doesn't fan out into many-to-many duplicates.
+  tar_target(marker_stats, {
+    primers_agg <- query_primers |>
+      dplyr::group_by(query_marker) |>
+      dplyr::summarise(
+        groups  = paste(sort(unique(group)), collapse = " / "),
+        markers = dplyr::first(markers),
+        .groups = "drop"
+      )
+
+    ncbi_sequences$results |>
+      dplyr::mutate(
+        query_marker = stringr::str_extract(query, "(?<= AND ).+$")
+      ) |>
+      dplyr::left_join(primers_agg, by = "query_marker") |>
+      dplyr::group_by(groups, markers, query_marker) |>
+      dplyr::summarise(
+        n_sequences = dplyr::n(),
+        n_species    = dplyr::n_distinct(organism, na.rm = TRUE),
+        median_slen  = stats::median(slen, na.rm = TRUE),
+        sd_slen      = stats::sd(slen, na.rm = TRUE),
+        q25_slen     = stats::quantile(slen, 0.25, na.rm = TRUE),
+        q75_slen     = stats::quantile(slen, 0.75, na.rm = TRUE),
+        .groups = "drop"
+      ) |>
+      dplyr::arrange(dplyr::desc(n_sequences))
+  }),
+  tar_target(marker_stats_saved, {
+    saveRDS(marker_stats, file.path(results_dir, "marker_stats.rds"))
+    file.path(results_dir, "marker_stats.rds")
+  }, format = "file"),
+
+  # ---- 9. Intraspecific sequence-length variation per marker ---------------
+  # For each (species, marker) with >1 record, compute length variability.
+  # High CV (sd / median * 100) signals mixed-length sequences for the same
+  # species+marker — likely lower-quality submissions or mixed amplicons.
+  #
+  # slen <= 10000 excludes complete genomes/mitogenomes (15kb+) that NCBI
+  # returns for gene queries (COI[Gene] also matches whole mitogenomes); those
+  # inflate CV to meaningless values and aren't barcode-quality candidates.
+  tar_target(intraspecific_variation, {
+    primers_dedup <- dplyr::distinct(query_primers, query_marker, markers)
+
+    ncbi_sequences$results |>
+      dplyr::filter(!is.na(organism), !is.na(slen), slen <= 10000) |>
+      dplyr::mutate(
+        query_marker = stringr::str_extract(query, "(?<= AND ).+$")
+      ) |>
+      dplyr::left_join(primers_dedup, by = "query_marker") |>
+      dplyr::group_by(organism, markers, query_marker) |>
+      dplyr::filter(dplyr::n() > 1) |>
+      dplyr::summarise(
+        n_seq       = dplyr::n(),
+        median_slen = stats::median(slen),
+        sd_slen     = stats::sd(slen),
+        cv_pct      = round(sd_slen / median_slen * 100, 1),
+        min_slen    = min(slen),
+        max_slen    = max(slen),
+        .groups = "drop"
+      ) |>
+      dplyr::arrange(dplyr::desc(cv_pct))
+  }),
+  tar_target(intraspecific_variation_saved, {
+    saveRDS(intraspecific_variation, file.path(results_dir, "intraspecific_variation.rds"))
+    file.path(results_dir, "intraspecific_variation.rds")
+  }, format = "file")
 )
