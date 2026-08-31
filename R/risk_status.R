@@ -18,7 +18,7 @@ load_risk_status <- function(path, jurisdiction = c("CA", "QC"), translate = FAL
   risk <- if (jurisdiction == "CA") {
     raw |>
       dplyr::mutate(
-        species = stringr::str_extract(`Nom.scientifique`, "^\\w+\\s+\\w+"),
+        species = regmatches(`Nom.scientifique`, regexpr("^\\w+\\s+\\w+", `Nom.scientifique`)),
         status = `Statut.selon.le.COSEPAC`
       ) |>
       dplyr::filter(status != "" & status != "Non active")
