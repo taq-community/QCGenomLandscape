@@ -59,7 +59,6 @@ check (one <code>Biostrings</code> translation call per sequence).</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">build_sequence_qc_table</span><span class="op">(</span></span>
 <span>  <span class="va">gb_records</span>,</span>
 <span>  log_every_batch <span class="op">=</span> <span class="fl">500</span>,</span>
-<span>  log_every_seq <span class="op">=</span> <span class="fl">20000</span>,</span>
 <span>  progress <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  cores <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -75,13 +74,10 @@ check (one <code>Biostrings</code> translation call per sequence).</p>
 
 
 <dt id="arg-log-every-batch">log_every_batch<a class="anchor" aria-label="anchor" href="#arg-log-every-batch"></a></dt>
-<dd><p>Integer, chunk size for both progress logging and
-parallel dispatch of the batch-parsing step, default 500</p></dd>
-
-
-<dt id="arg-log-every-seq">log_every_seq<a class="anchor" aria-label="anchor" href="#arg-log-every-seq"></a></dt>
-<dd><p>Integer, log a progress line every this many
-stop-codon checks, default 20000</p></dd>
+<dd><p>Integer, chunk size for progress logging, parallel
+dispatch of batch parsing, AND per-chunk QC scoring (parse -&gt; score -&gt;
+stop-codon check all happen per chunk, not in three full-table passes),
+default 500</p></dd>
 
 
 <dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>
@@ -90,10 +86,13 @@ stop-codon checks, default 20000</p></dd>
 
 <dt id="arg-cores">cores<a class="anchor" aria-label="anchor" href="#arg-cores"></a></dt>
 <dd><p>Integer, cores to use for parallel batch parsing, default
-<code>NULL</code> meaning <code>parallel::detectCores() - 1</code> (at least 1). Deliberately
-conservative rather than using every core, since each worker holds its
-own copy of the batch text and this step has previously run under heavy
-memory pressure.</p></dd>
+<code>NULL</code> meaning <code>min(4, parallel::detectCores() - 1)</code> (at least 1).
+Deliberately conservative rather than using every core: each <code>mclapply()</code>
+worker forks a copy of its batch text, so peak memory scales with the
+core count on top of the per-batch footprint – <code>detectCores() - 1</code>
+previously meant 15 concurrent forks on a 16-core machine, which is what
+pushed this step into the OOM killer under any other memory pressure on
+the same machine.</p></dd>
 
 </dl></div>
     <div class="section level2">
