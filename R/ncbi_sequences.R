@@ -28,6 +28,9 @@ build_ncbi_queries <- function(species_df, query_primers, batch_size = 1) {
     dplyr::distinct(species, query_marker)
 
   if (batch_size <= 1) {
+    if (nrow(joined) == 0) {
+      return(character(0))
+    }
     return(
       paste0(joined$species, "[Organism] AND ", joined$query_marker) |>
         unique()

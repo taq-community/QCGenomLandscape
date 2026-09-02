@@ -7,7 +7,6 @@
 build_sequence_qc_table(
   gb_records,
   log_every_batch = 500,
-  log_every_seq = 20000,
   progress = TRUE,
   cores = NULL
 )
@@ -16,19 +15,21 @@ build_sequence_qc_table(
 \item{gb_records}{List of raw GenBank flat-file blobs, e.g. from
 \code{\link[=fetch_gb_records]{fetch_gb_records()}}}
 
-\item{log_every_batch}{Integer, chunk size for both progress logging and
-parallel dispatch of the batch-parsing step, default 500}
-
-\item{log_every_seq}{Integer, log a progress line every this many
-stop-codon checks, default 20000}
+\item{log_every_batch}{Integer, chunk size for progress logging, parallel
+dispatch of batch parsing, AND per-chunk QC scoring (parse -> score ->
+stop-codon check all happen per chunk, not in three full-table passes),
+default 500}
 
 \item{progress}{Logical, also show \code{purrr} progress bars, default \code{TRUE}}
 
 \item{cores}{Integer, cores to use for parallel batch parsing, default
-\code{NULL} meaning \code{parallel::detectCores() - 1} (at least 1). Deliberately
-conservative rather than using every core, since each worker holds its
-own copy of the batch text and this step has previously run under heavy
-memory pressure.}
+\code{NULL} meaning \code{min(4, parallel::detectCores() - 1)} (at least 1).
+Deliberately conservative rather than using every core: each \code{mclapply()}
+worker forks a copy of its batch text, so peak memory scales with the
+core count on top of the per-batch footprint -- \code{detectCores() - 1}
+previously meant 15 concurrent forks on a 16-core machine, which is what
+pushed this step into the OOM killer under any other memory pressure on
+the same machine.}
 }
 \value{
 Tibble with columns \code{accession}, \code{definition}, \code{gene}, \code{sequence},

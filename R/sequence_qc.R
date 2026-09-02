@@ -264,16 +264,19 @@ flag_barcode_gap_outliers <- function(sequence, species, group, k = 5, min_n = 3
 #'
 #' @param gb_records List of raw GenBank flat-file blobs, e.g. from
 #'   [fetch_gb_records()]
-#' @param log_every_batch Integer, chunk size for both progress logging and
-#'   parallel dispatch of the batch-parsing step, default 500
-#' @param log_every_seq Integer, log a progress line every this many
-#'   stop-codon checks, default 20000
+#' @param log_every_batch Integer, chunk size for progress logging, parallel
+#'   dispatch of batch parsing, AND per-chunk QC scoring (parse -> score ->
+#'   stop-codon check all happen per chunk, not in three full-table passes),
+#'   default 500
 #' @param progress Logical, also show `purrr` progress bars, default `TRUE`
 #' @param cores Integer, cores to use for parallel batch parsing, default
-#'   `NULL` meaning `parallel::detectCores() - 1` (at least 1). Deliberately
-#'   conservative rather than using every core, since each worker holds its
-#'   own copy of the batch text and this step has previously run under heavy
-#'   memory pressure.
+#'   `NULL` meaning `min(4, parallel::detectCores() - 1)` (at least 1).
+#'   Deliberately conservative rather than using every core: each `mclapply()`
+#'   worker forks a copy of its batch text, so peak memory scales with the
+#'   core count on top of the per-batch footprint -- `detectCores() - 1`
+#'   previously meant 15 concurrent forks on a 16-core machine, which is what
+#'   pushed this step into the OOM killer under any other memory pressure on
+#'   the same machine.
 #' @return Tibble with columns `accession`, `definition`, `gene`, `sequence`,
 #'   `seq_length`, `n_count`, `n_pct`, `gc_pct`, `has_stop`,
 #'   `is_complete_genome` (see [is_complete_genome()] -- GenBank's own
@@ -281,13 +284,12 @@ flag_barcode_gap_outliers <- function(sequence, species, group, k = 5, min_n = 3
 #' @export
 build_sequence_qc_table <- function(gb_records,
                                      log_every_batch = 500,
-                                     log_every_seq = 20000,
                                      progress = TRUE,
                                      cores = NULL) {
   n_batches <- length(gb_records)
   if (is.null(cores)) {
     detected <- parallel::detectCores()
-    cores <- if (is.na(detected)) 1L else max(1L, detected - 1L)
+    cores <- if (is.na(detected)) 1L else max(1L, min(4L, detected - 1L))
   }
   if (.Platform$OS.type == "windows" && cores > 1) {
     logger::log_info("seq_data: parallel batch parsing needs fork(), unavailable on Windows -- using 1 core")
@@ -296,7 +298,8 @@ build_sequence_qc_table <- function(gb_records,
   logger::log_info("seq_data: parsing {n_batches} GenBank batches ({cores} core(s))...")
 
   batch_chunks <- split(seq_len(n_batches), ceiling(seq_len(n_batches) / log_every_batch))
-  parsed <- purrr::map_dfr(batch_chunks, function(idx) {
+  n_seq_seen <- 0L
+  qc <- purrr::map_dfr(batch_chunks, function(idx) {
     # try() (not just mclapply()'s own error containment) since mclapply()
     # only isolates errors when it actually forks -- it silently falls back
     # to plain lapply() (no containment at all) when forking isn't
@@ -313,28 +316,31 @@ build_sequence_qc_table <- function(gb_records,
       chunk_results <- chunk_results[!failed]
     }
 
-    logger::log_info("seq_data: parsed batch {max(idx)}/{n_batches}")
-    dplyr::bind_rows(chunk_results)
+    parsed_chunk <- dplyr::bind_rows(chunk_results)
+    if (nrow(parsed_chunk) == 0) {
+      # every batch in this chunk failed to parse -- an empty, columnless
+      # tibble has no $sequence/$definition to score; let it contribute 0
+      # rows to the final bind_rows() rather than erroring on missing columns
+      return(parsed_chunk)
+    }
+
+    # scored per chunk (not once over the full ~635k-row table at the end) --
+    # score_sequence_quality()'s nchar()/gsub() calls each build a full-length
+    # temporary vector, so doing this over the whole table at once doubles
+    # the peak memory of the single largest object in this function right
+    # when it's largest; per-chunk, those temporaries are bounded to one
+    # chunk and freed before the next iteration starts
+    scored_chunk <- dplyr::bind_cols(parsed_chunk, score_sequence_quality(parsed_chunk$sequence)) |>
+      dplyr::mutate(is_complete_genome = is_complete_genome(definition))
+    scored_chunk$has_stop <- has_stop_codon_coi(scored_chunk$sequence)
+
+    n_seq_seen <<- n_seq_seen + nrow(scored_chunk)
+    logger::log_info("seq_data: parsed + scored batch {max(idx)}/{n_batches} ({n_seq_seen} records so far)")
+    scored_chunk
   }, .progress = progress)
 
-  logger::log_info("seq_data: parsed {nrow(parsed)} records -- scoring sequence quality...")
-  qc <- dplyr::bind_cols(parsed, score_sequence_quality(parsed$sequence)) |>
-    dplyr::mutate(is_complete_genome = is_complete_genome(definition))
-
-  n_seq <- nrow(qc)
-  logger::log_info("seq_data: checking {n_seq} sequences for in-frame stop codons...")
-  # has_stop_codon_coi() is itself vectorized (one Biostrings::translate()
-  # call per frame, not per sequence) -- chunking here is only to keep
-  # progress visible on a full run, not for speed
-  chunks <- split(seq_len(n_seq), ceiling(seq_len(n_seq) / log_every_seq))
-  has_stop <- vector("logical", n_seq)
-  for (idx in chunks) {
-    has_stop[idx] <- has_stop_codon_coi(qc$sequence[idx])
-    logger::log_info("seq_data: stop-codon check {max(idx)}/{n_seq}")
-  }
-
-  logger::log_success("seq_data: done ({n_seq} records)")
-  dplyr::mutate(qc, has_stop = has_stop)
+  logger::log_success("seq_data: done ({nrow(qc)} records)")
+  qc
 }
 
 #' Align a set of DNA sequences

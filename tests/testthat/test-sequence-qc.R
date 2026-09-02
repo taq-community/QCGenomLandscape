@@ -125,7 +125,7 @@ test_that("build_sequence_qc_table parses batches, scores quality, and flags sto
 
   out <- build_sequence_qc_table(
     gb_records,
-    log_every_batch = 1, log_every_seq = 1, progress = FALSE, cores = 2
+    log_every_batch = 1, progress = FALSE, cores = 2
   )
 
   expect_equal(nrow(out), 6)
@@ -154,7 +154,7 @@ test_that("build_sequence_qc_table drops a batch that fails to parse instead of 
 
   out <- build_sequence_qc_table(
     gb_records,
-    log_every_batch = 1, log_every_seq = 1, progress = FALSE, cores = 2
+    log_every_batch = 1, progress = FALSE, cores = 2
   )
 
   expect_equal(nrow(out), 3)

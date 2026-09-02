@@ -342,7 +342,7 @@ list(
         query_marker = stringr::str_extract(query, "(?<= AND ).+$")
       ) |>
       dplyr::left_join(primers_dedup, by = "query_marker") |>
-      dplyr::group_by(organism, markers, query_marker) |>
+      dplyr::group_by(organism, markers) |>
       dplyr::filter(dplyr::n() > 1) |>
       dplyr::summarise(
         n_seq       = dplyr::n(),
