@@ -41,7 +41,7 @@ plot_gene_prevalence <- function(genes_grouped,
     ggplot2::coord_polar() +
     ggplot2::facet_wrap(~gene_group, ncol = 3) +
     ggplot2::scale_y_continuous(limits = c(-10, 100), expand = c(0, 0), breaks = c(0, 25, 50, 75, 100)) +
-    ggplot2::scale_fill_gradientn(colours = rev(c("#6C5B7B", "#C06C84", "#F67280", "#F8B195"))) +
+    ggplot2::scale_fill_gradientn(colours = rev(c("#252525", "#636363", "#969696", "#D9D9D9"))) +
     ggplot2::labs(x = NULL, y = "Species with gene (%)", title = "Gene prevalence by taxonomic group") +
     ggplot2::theme_minimal(base_size = 14) +
     ggplot2::theme(strip.text = ggplot2::element_text(face = "bold", size = 10))
@@ -72,7 +72,7 @@ plot_risk_status_coverage <- function(risk_genes, jurisdiction = "QC") {
     ggplot2::geom_text(ggplot2::aes(label = paste0(round(pct, 1), "%")), size = 4) +
     ggplot2::coord_polar() +
     ggplot2::scale_y_continuous(limits = c(-10, 100), expand = c(0, 0), breaks = c(0, 25, 50, 75, 100)) +
-    ggplot2::scale_fill_gradientn("% species with data", colours = rev(c("#6C5B7B", "#C06C84", "#F67280", "#F8B195"))) +
+    ggplot2::scale_fill_gradientn("% species with data", colours = rev(c("#252525", "#636363", "#969696", "#D9D9D9"))) +
     ggplot2::labs(
       x = NULL, y = "Species with genomic data (%)",
       title = "Genomic data coverage by species at risk status"

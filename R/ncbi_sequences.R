@@ -232,3 +232,27 @@ fetch_ncbi_sequences <- function(queries,
     high_id_queries = high_id_queries
   )
 }
+
+#' Drop subspecies/infraspecific records from NCBI results
+#'
+#' NCBI's `[Organism]` search matches a species name *and* everything below
+#' it taxonomically (subspecies, breeds, domestic forms), e.g. querying
+#' `"Canis lupus[Organism]"` also returns `"Canis lupus familiaris"` records.
+#' Left unfiltered, these can dominate a species' sequence count (domestic
+#' dog barcodes outnumber wild wolf ones ~3:1 in the raw NCBI pull) and bias
+#' any coverage/quality analysis keyed on the BDQC species list. Keeping only
+#' rows whose `organism` exactly matches a name in `species` removes them.
+#'
+#' @param results Tibble with an `organism` column, e.g. `fetch_ncbi_sequences()$results`
+#' @param species Character vector of exact species names to keep (typically
+#'   the BDQC species list)
+#' @return `results`, filtered to rows where `organism %in% species`
+#' @export
+filter_named_species <- function(results, species) {
+  n_before <- nrow(results)
+  filtered <- dplyr::filter(results, organism %in% species)
+  logger::log_info(
+    "Subspecies filter: kept {nrow(filtered)}/{n_before} records ({n_before - nrow(filtered)} infraspecific records dropped)"
+  )
+  filtered
+}

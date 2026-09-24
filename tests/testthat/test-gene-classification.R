@@ -62,3 +62,27 @@ test_that("assign_gene_group falls back to Other for unmatched genes", {
 test_that("assign_gene_group returns NA for NA input", {
   expect_equal(assign_gene_group(NA_character_), NA_character_)
 })
+
+test_that("assign_single_marker splits the composite gene groups", {
+  # the whole point: these three share one assign_gene_group() label but are
+  # not length-comparable, so a per-marker metric must keep them apart
+  expect_equal(
+    assign_single_marker(c("rbcL", "matK", "trnL")),
+    c("RBCL", "MATK", "TRNL")
+  )
+  expect_equal(assign_single_marker(c("RPB1", "RPB2")), c("RPB1", "RPB2"))
+  # case variants and the optional " rRNA" suffix are the same marker
+  expect_equal(assign_single_marker(c("matK", "matk", "MATK")), rep("MATK", 3))
+  expect_equal(assign_single_marker(c("18S rRNA", "18S")), c("18S", "18S"))
+})
+
+test_that("assign_single_marker keeps synonym unification where the label is one marker", {
+  expect_equal(assign_single_marker(c("COX1", "COI")), c("COI", "COI"))
+  expect_equal(assign_single_marker(c("cytb", "cob")), c("Cytb", "Cytb"))
+})
+
+test_that("assign_single_marker returns NA where no single marker applies", {
+  expect_true(is.na(assign_single_marker("ND1;ND2;COX1"))) # genome-scale
+  expect_true(is.na(assign_single_marker("xyz123")))       # "Other"
+  expect_true(is.na(assign_single_marker(NA_character_)))
+})

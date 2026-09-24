@@ -52,4 +52,8 @@ with a BOLD-sourced \code{edna_occurrences}) -- this has little effect on the
 presence-based metrics \code{\link[=summarize_edna_contribution]{summarize_edna_contribution()}} computes from the
 result, which count distinct (species, cell) / (species, year) pairs, not
 raw record volume.
+
+Requires the DuckDB \code{httpfs} and \code{spatial} extensions. Install them
+once with \code{duckdb::duckdb_install_extension(c("httpfs", "spatial"))} before
+first use.
 }

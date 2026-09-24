@@ -51,3 +51,44 @@ assign_gene_group <- function(gene) {
     TRUE ~ "Other"
   )
 }
+
+#' Resolve a gene annotation to a single comparable marker
+#'
+#' [assign_gene_group()] is deliberately coarse: three of its labels are
+#' *buckets* of several distinct markers -- `"Photosynthesis-related"` pools
+#' rbcL (~1400 bp), matK (~850 bp) and trnL (~300 bp), `"Nuclear rRNA / ITS"`
+#' pools 5.8S (~160 bp) with LSU (~3.5 kb), and `"Fungal protein-coding"`
+#' pools RPB1 with RPB2. That is fine for coverage figures ("does this species
+#' have a plastid marker at all?") but wrong for any length-based quality
+#' metric, which needs sequences that are actually comparable to each other.
+#'
+#' This resolves those buckets down to the raw gene name (normalised for case
+#' and for the optional ` rRNA` suffix, so `"18S rRNA"` and `"18S"` are one
+#' marker), and keeps [assign_gene_group()]'s label everywhere else -- that is
+#' where the label already denotes exactly one marker *and* usefully unifies
+#' synonyms (`COX1`/`COI`, `cytb`/`cob`).
+#'
+#' Genome-scale records and the `"Other"` catch-all resolve to `NA`: neither
+#' is a single marker, so neither belongs in a per-marker comparison.
+#'
+#' @param gene Character vector of raw gene names, as annotated on the record
+#' @return Character vector of marker labels, `NA` where no single marker applies
+#' @examples
+#' assign_single_marker(c("COX1", "rbcL", "matK", "18S rRNA", "18S"))
+#' assign_single_marker("ND1;ND2;COX1") # NA -- genome-scale record
+#' @export
+assign_single_marker <- function(gene) {
+  group <- assign_gene_group(gene)
+  composite <- c(
+    "Photosynthesis-related (rbcL, matK, etc.)",
+    "Nuclear rRNA / ITS",
+    "Fungal protein-coding (RPB1/RPB2, TEF1)"
+  )
+  raw <- toupper(sub("\\s*rRNA$", "", trimws(gene), ignore.case = TRUE))
+  dplyr::case_when(
+    is.na(group) ~ NA_character_,
+    group %in% c("Multi-gene / genome-scale record", "Other") ~ NA_character_,
+    group %in% composite ~ raw,
+    TRUE ~ group
+  )
+}

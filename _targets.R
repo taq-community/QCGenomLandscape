@@ -156,7 +156,11 @@ list(
   ),
   tar_target(
     ncbi_sequences,
-    QCGenomLandscape::fetch_ncbi_sequences(ncbi_queries),
+    {
+      raw <- QCGenomLandscape::fetch_ncbi_sequences(ncbi_queries)
+      raw$results <- QCGenomLandscape::filter_named_species(raw$results, bdqc_species$species)
+      raw
+    },
     repository = s3_repository, resources = s3_resources
   ),
   tar_target(ncbi_results_saved, {
@@ -334,23 +338,40 @@ list(
   # returns for gene queries (COI[Gene] also matches whole mitogenomes); those
   # inflate CV to meaningless values and aren't barcode-quality candidates.
   tar_target(intraspecific_variation, {
-    primers_dedup <- dplyr::distinct(query_primers, query_marker, markers)
+    # The CV answers "do sequences of the SAME marker, for the SAME species,
+    # have consistent lengths?" -- so the grouping has to be ONE marker.
+    # It used to group on `markers`, the primer SET of the Entrez query
+    # (e.g. vertebrates all share "COI,12S,16S,cytb"), which pooled markers
+    # whose expected lengths differ by an order of magnitude: the resulting
+    # CV measured the marker mix, not sequence quality. Canis lupus pallipes
+    # topped the ranking at CV 1132% purely because 12S (~330 bp) and cytb
+    # (~1140 bp) records were averaged together.
+    #
+    # Group on the marker actually annotated on each record instead.
+    # assign_single_marker() (not assign_gene_group()) because three of the
+    # latter's labels are themselves buckets of several markers -- pooling
+    # rbcL/matK/trnL under "Photosynthesis-related" would repeat the same
+    # mistake one level down. It returns NA for genome-scale and "Other"
+    # records, which aren't a single marker either.
+    species_by_accession <- ncbi_sequences$results |>
+      dplyr::filter(!is.na(organism), !is.na(accession)) |>
+      # seq_data$accession carries no version suffix, ncbi_sequences' does
+      dplyr::transmute(accession = sub("\\.\\d+$", "", accession), organism)
 
-    ncbi_sequences$results |>
-      dplyr::filter(!is.na(organism), !is.na(slen), slen <= 10000) |>
-      dplyr::mutate(
-        query_marker = stringr::str_extract(query, "(?<= AND ).+$")
-      ) |>
-      dplyr::left_join(primers_dedup, by = "query_marker") |>
-      dplyr::group_by(organism, markers) |>
+    seq_data |>
+      dplyr::filter(!is.na(gene), !is.na(seq_length), seq_length <= 10000) |>
+      dplyr::mutate(marker = QCGenomLandscape::assign_single_marker(gene)) |>
+      dplyr::filter(!is.na(marker)) |>
+      dplyr::inner_join(species_by_accession, by = "accession") |>
+      dplyr::group_by(organism, marker) |>
       dplyr::filter(dplyr::n() > 1) |>
       dplyr::summarise(
         n_seq       = dplyr::n(),
-        median_slen = stats::median(slen),
-        sd_slen     = stats::sd(slen),
+        median_slen = stats::median(seq_length),
+        sd_slen     = stats::sd(seq_length),
         cv_pct      = round(sd_slen / median_slen * 100, 1),
-        min_slen    = min(slen),
-        max_slen    = max(slen),
+        min_slen    = min(seq_length),
+        max_slen    = max(seq_length),
         .groups = "drop"
       ) |>
       dplyr::arrange(dplyr::desc(cv_pct))

@@ -150,6 +150,27 @@ test_that("fetch_ncbi_sequences records a deficient query when search_fn errors"
   expect_equal(out$deficient_queries[[1]]$error_type, "entrez_search_ids")
 })
 
+# ---- filter_named_species ----
+
+test_that("filter_named_species drops subspecies/infraspecific records", {
+  results <- tibble::tibble(
+    accession = c("A1", "A2", "A3", "A4"),
+    organism = c("Canis lupus", "Canis lupus familiaris", "Canis lupus dingo", "Alces alces")
+  )
+
+  out <- filter_named_species(results, species = c("Canis lupus", "Alces alces"))
+
+  expect_equal(out$accession, c("A1", "A4"))
+})
+
+test_that("filter_named_species keeps everything when all organisms match exactly", {
+  results <- tibble::tibble(accession = c("A1", "A2"), organism = c("Alces alces", "Ursus americanus"))
+
+  out <- filter_named_species(results, species = c("Alces alces", "Ursus americanus"))
+
+  expect_equal(nrow(out), 2)
+})
+
 test_that("fetch_ncbi_sequences returns an empty result for a zero-count query", {
   zero_count_search_fn <- function(db, term, retmax) list(count = 0, ids = character(0))
 
