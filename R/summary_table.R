@@ -51,12 +51,25 @@ build_summary_dataframe <- function(ncbi_results, genes_df, bdqc_taxo, ca_risk, 
     "S\u00e9quences totales (NCBI)" = "n_total_seq"
   )
 
+  # A species can carry more than one status in a risk register (e.g. two
+  # COSEWIC assessments for different populations). Left-joining those
+  # directly fans the table out to several rows for one species, which then
+  # double-counts it in every per-group tally downstream. Collapse to one
+  # row per species first, keeping every distinct status.
+  collapse_status <- function(df, col) {
+    df |>
+      dplyr::filter(!is.na(species), !is.na(status), status != "") |>
+      dplyr::distinct(species, status) |>
+      dplyr::group_by(species) |>
+      dplyr::summarise(!!col := paste(sort(unique(status)), collapse = "; "), .groups = "drop")
+  }
+
   ncbi_results |>
     dplyr::distinct(species) |>
     dplyr::filter(!is.na(species)) |>
     dplyr::left_join(bdqc_taxo, by = "species") |>
-    dplyr::left_join(ca_risk |> dplyr::select(species, statut_canada = status), by = "species") |>
-    dplyr::left_join(qc_risk |> dplyr::select(species, statut_quebec = status), by = "species") |>
+    dplyr::left_join(collapse_status(ca_risk, "statut_canada"), by = "species") |>
+    dplyr::left_join(collapse_status(qc_risk, "statut_quebec"), by = "species") |>
     dplyr::left_join(total_seq, by = "species") |>
     dplyr::left_join(gene_counts, by = "species") |>
     dplyr::select(

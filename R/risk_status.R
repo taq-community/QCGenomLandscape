@@ -18,7 +18,13 @@ load_risk_status <- function(path, jurisdiction = c("CA", "QC"), translate = FAL
   risk <- if (jurisdiction == "CA") {
     raw |>
       dplyr::mutate(
-        species = regmatches(`Nom.scientifique`, regexpr("^\\w+\\s+\\w+", `Nom.scientifique`)),
+        # regmatches() silently returns a SHORTER vector when a row does not
+        # match, which makes mutate() fail with a size error rather than
+        # flagging the offending row. The COSEWIC list contains at least one
+        # non-binomial entry -- "Ambystoma (2) laterale - jeffersonianum",
+        # the unisexual Ambystoma complex -- so extract length-safely and let
+        # the row carry NA, which the binomial filter below then drops.
+        species = extract_binomial(`Nom.scientifique`),
         status = `Statut.selon.le.COSEPAC`
       ) |>
       dplyr::filter(status != "" & status != "Non active")
@@ -33,6 +39,7 @@ load_risk_status <- function(path, jurisdiction = c("CA", "QC"), translate = FAL
 
   risk <- risk |>
     dplyr::mutate(jurisdiction = jurisdiction) |>
+    dplyr::filter(!is.na(species)) |>
     dplyr::select(species, status, jurisdiction) |>
     dplyr::distinct()
 
@@ -53,4 +60,22 @@ load_risk_status <- function(path, jurisdiction = c("CA", "QC"), translate = FAL
   }
 
   risk
+}
+
+#' Extract a `Genus species` binomial, preserving vector length
+#'
+#' [regmatches()] drops non-matching elements, so using it inside
+#' [dplyr::mutate()] turns one malformed name into a whole-pipeline size
+#' error. This returns `NA` for rows that carry no binomial instead.
+#'
+#' @param x Character vector of scientific names
+#' @return Character vector the same length as `x`
+#' @examples
+#' extract_binomial(c("Ambystoma maculatum", "Ambystoma (2) laterale - jeffersonianum"))
+#' @export
+extract_binomial <- function(x) {
+  m <- regexpr("^\\w+\\s+\\w+", x)
+  out <- rep(NA_character_, length(x))
+  out[m != -1] <- regmatches(x, m)
+  out
 }

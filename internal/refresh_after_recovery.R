@@ -27,7 +27,14 @@ strip_version <- function(x) sub("\\.\\d+$", "", x)
 
 ncbi <- readRDS("results/ncbi_results.rds")
 seq_data <- readRDS("results/sequence_qc.rds")
-genes <- readRDS("results/genes_subsamp_50_df.rds")
+# genes_saved writes results/genes_subsamp_50_df.rds, but the 2026-08-19 run
+# left only the targets copy on disk -- read whichever exists.
+genes_path <- "results/genes_subsamp_50_df.rds"
+genes <- if (file.exists(genes_path)) {
+  readRDS(genes_path)
+} else {
+  readRDS("_targets/objects/gene_annotations")
+}
 bdqc <- read.csv("data/bdqc_list_01122025.csv") |> dplyr::filter(rank == "species")
 
 # ---- 1. sequence QC rows for the recovered accessions ---------------------
@@ -62,23 +69,22 @@ log_info(
   "gene_annotations: {sum(!is.na(genes$definition))}/{nrow(genes)} rows now carry a definition"
 )
 
-# accessions the subsample never reached, for species recovered in step 1
+# Species that already have at least one annotated accession need nothing;
+# the rest (those recovered in step 1) get the same 5-accession subsample the
+# pipeline would have drawn for them.
+annotated_species <- ncbi |>
+  dplyr::transmute(species = organism, acc_nov = strip_version(accession)) |>
+  dplyr::filter(acc_nov %in% genes$acc_nov) |>
+  dplyr::pull(species) |>
+  unique()
+
 set.seed(42)
 sub_new <- ncbi |>
-  dplyr::mutate(species = organism) |>
-  dplyr::filter(!species %in% unique(genes$species_hint %||% character(0))) |>
-  dplyr::filter(!strip_version(accession) %in% genes$acc_nov) |>
+  dplyr::transmute(species = organism, accession) |>
+  dplyr::filter(!is.na(species), !species %in% annotated_species) |>
   dplyr::group_by(species) |>
   dplyr::slice_sample(n = 5) |>
   dplyr::ungroup()
-
-# only species with no annotation at all need a fetch
-covered <- ncbi |>
-  dplyr::transmute(species = organism, acc_nov = strip_version(accession)) |>
-  dplyr::semi_join(genes, by = "acc_nov") |>
-  dplyr::pull(species) |>
-  unique()
-sub_new <- dplyr::filter(sub_new, !species %in% covered)
 log_info("{dplyr::n_distinct(sub_new$species)} species need gene annotations")
 
 if (nrow(sub_new)) {
