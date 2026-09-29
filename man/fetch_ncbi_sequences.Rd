@@ -11,6 +11,8 @@ fetch_ncbi_sequences(
   high_id_threshold = 500,
   search_fn = rentrez::entrez_search,
   summary_fn = rentrez::entrez_summary,
+  max_attempts = 4,
+  sleep_fn = Sys.sleep,
   progress = TRUE
 )
 }
@@ -30,6 +32,14 @@ flagged in \code{high_id_queries}, default 500}
 
 \item{summary_fn}{Function with signature \verb{(db, id)}, default
 \code{\link[rentrez:entrez_summary]{rentrez::entrez_summary()}}}
+
+\item{max_attempts}{Integer, attempts per Entrez call before the query is
+recorded as deficient, default 4 (exponential backoff: 2s, 4s, 8s).
+Transient timeouts and 502s are the norm at this query volume, so a
+single attempt loses whole batches of species -- see \code{\link[=with_entrez_retry]{with_entrez_retry()}}.}
+
+\item{sleep_fn}{Function with signature \code{(seconds)}, default \code{\link[=Sys.sleep]{Sys.sleep()}};
+injectable so retry backoff doesn't slow down tests}
 
 \item{progress}{Logical, show a progress bar, default \code{TRUE}}
 }

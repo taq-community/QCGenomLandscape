@@ -49,6 +49,49 @@ build_ncbi_queries <- function(species_df, query_primers, batch_size = 1) {
     as.character()
 }
 
+#' Retry an Entrez call across transient failures
+#'
+#' Entrez fails transiently often enough that a single attempt is not a
+#' reliable read: DNS resolution times out, the load balancer returns 502 on
+#' large batches, and rentrez occasionally throws `"subscript out of bounds"`
+#' parsing a truncated response. Every one of those is retryable, and every
+#' one of them silently cost this pipeline a whole batch of species before
+#' this helper existed -- the 2026-08-19 run lost all 24 Quebec amphibians to
+#' a single 10-second DNS timeout on query 1 of 954.
+#'
+#' @param expr Quoted expression performing the Entrez call
+#' @param max_attempts Integer, total attempts before giving up, default 4
+#' @param sleep_fn Function with signature `(seconds)`, default [Sys.sleep()];
+#'   injectable so retry backoff doesn't slow down tests
+#' @param label Character, short description used in log messages
+#' @return The value of `expr`, or a `condition` object if every attempt failed
+#' @keywords internal
+with_entrez_retry <- function(expr, max_attempts = 4, sleep_fn = Sys.sleep,
+                               label = "entrez call") {
+  expr <- substitute(expr)
+  last_error <- NULL
+  for (attempt in seq_len(max_attempts)) {
+    result <- tryCatch(
+      eval(expr, envir = parent.frame()),
+      error = function(e) {
+        last_error <<- e
+        NULL
+      }
+    )
+    if (!is.null(result)) {
+      if (attempt > 1) {
+        logger::log_success("{label} succeeded on attempt {attempt}/{max_attempts}")
+      }
+      return(result)
+    }
+    logger::log_warn(
+      "{label} attempt {attempt}/{max_attempts} failed: {last_error$message}"
+    )
+    if (attempt < max_attempts) sleep_fn(2^attempt)
+  }
+  last_error
+}
+
 #' Fetch NCBI nucleotide records for a set of species/marker queries
 #'
 #' The batching/error-handling loop behind the NCBI query step. `search_fn`/
@@ -73,6 +116,12 @@ build_ncbi_queries <- function(species_df, query_primers, batch_size = 1) {
 #'   [rentrez::entrez_search()]
 #' @param summary_fn Function with signature `(db, id)`, default
 #'   [rentrez::entrez_summary()]
+#' @param max_attempts Integer, attempts per Entrez call before the query is
+#'   recorded as deficient, default 4 (exponential backoff: 2s, 4s, 8s).
+#'   Transient timeouts and 502s are the norm at this query volume, so a
+#'   single attempt loses whole batches of species -- see [with_entrez_retry()].
+#' @param sleep_fn Function with signature `(seconds)`, default [Sys.sleep()];
+#'   injectable so retry backoff doesn't slow down tests
 #' @param progress Logical, show a progress bar, default `TRUE`
 #' @return A list with three elements: `results` (tibble of parsed sequence
 #'   summaries, with an `is_voucher` logical column), `deficient_queries`
@@ -86,6 +135,8 @@ fetch_ncbi_sequences <- function(queries,
                                   high_id_threshold = 500,
                                   search_fn = rentrez::entrez_search,
                                   summary_fn = rentrez::entrez_summary,
+                                  max_attempts = 4,
+                                  sleep_fn = Sys.sleep,
                                   progress = TRUE) {
   deficient_queries <- list()
   high_id_queries <- list()
@@ -99,20 +150,24 @@ fetch_ncbi_sequences <- function(queries,
         # A single entrez_search(retmax = retmax) already returns both
         # `count` and `ids` in one response -- no need for a separate
         # retmax = 0 call just to read `count` first.
-        id_result <- tryCatch(
+        id_result <- with_entrez_retry(
           search_fn(db = "nucleotide", term = q, retmax = retmax),
-          error = function(e) {
-            logger::log_error("Error searching for query {i}: {e$message}")
-            deficient_queries[[length(deficient_queries) + 1]] <<- list(
-              query_index = i,
-              query = q,
-              error_type = "entrez_search_ids",
-              error_message = e$message,
-              timestamp = Sys.time()
-            )
-            NULL
-          }
+          max_attempts = max_attempts,
+          sleep_fn = sleep_fn,
+          label = paste0("search query ", i)
         )
+
+        if (inherits(id_result, "condition")) {
+          logger::log_error("Error searching for query {i}: {id_result$message}")
+          deficient_queries[[length(deficient_queries) + 1]] <<- list(
+            query_index = i,
+            query = q,
+            error_type = "entrez_search_ids",
+            error_message = id_result$message,
+            timestamp = Sys.time()
+          )
+          return(tibble::tibble())
+        }
 
         if (is.null(id_result)) {
           return(tibble::tibble())
@@ -146,22 +201,26 @@ fetch_ncbi_sequences <- function(queries,
 
           logger::log_info("Fetching summaries {batch_start}-{batch_end} of {length(id_result$ids)}")
 
-          batch_summary <- tryCatch(
+          batch_summary <- with_entrez_retry(
             summary_fn(db = "nucleotide", id = batch_ids),
-            error = function(e) {
-              logger::log_error("Error fetching summaries for batch {batch_start}-{batch_end}: {e$message}")
-              deficient_queries[[length(deficient_queries) + 1]] <<- list(
-                query_index = i,
-                query = q,
-                error_type = "entrez_summary",
-                error_message = e$message,
-                batch_range = paste0(batch_start, "-", batch_end),
-                batch_ids = batch_ids,
-                timestamp = Sys.time()
-              )
-              NULL
-            }
+            max_attempts = max_attempts,
+            sleep_fn = sleep_fn,
+            label = paste0("summaries ", batch_start, "-", batch_end, " of query ", i)
           )
+
+          if (inherits(batch_summary, "condition")) {
+            logger::log_error("Error fetching summaries for batch {batch_start}-{batch_end}: {batch_summary$message}")
+            deficient_queries[[length(deficient_queries) + 1]] <<- list(
+              query_index = i,
+              query = q,
+              error_type = "entrez_summary",
+              error_message = batch_summary$message,
+              batch_range = paste0(batch_start, "-", batch_end),
+              batch_ids = batch_ids,
+              timestamp = Sys.time()
+            )
+            batch_summary <- NULL
+          }
 
           if (!is.null(batch_summary)) {
             if (length(batch_ids) == 1) {
@@ -231,6 +290,86 @@ fetch_ncbi_sequences <- function(queries,
     deficient_queries = deficient_queries,
     high_id_queries = high_id_queries
   )
+}
+
+#' Summarise the species lost to failed Entrez queries
+#'
+#' `fetch_ncbi_sequences()` records every query it could not complete in
+#' `deficient_queries` and carries on, so a failed batch does not abort a
+#' multi-hour run. Nothing downstream consumed that record, which is how a
+#' single timed-out batch became a published "Amphibians: 0% coverage" panel.
+#' This turns the failure log back into the list of species it cost, so the
+#' pipeline can surface -- or refuse to pass -- an incomplete corpus.
+#'
+#' @param deficient_queries List as returned in
+#'   `fetch_ncbi_sequences()$deficient_queries`
+#' @param species Character vector of species names to look for in the failed
+#'   query strings, typically the BDQC species list
+#' @return Tibble with one row per (query_index, species) lost, columns
+#'   `query_index`, `error_type`, `error_message`, `species`
+#' @export
+deficient_query_species <- function(deficient_queries, species) {
+  empty <- tibble::tibble(
+    query_index = integer(), error_type = character(),
+    error_message = character(), species = character()
+  )
+  if (!length(deficient_queries)) {
+    return(empty)
+  }
+  purrr::map_df(deficient_queries, function(d) {
+    hit <- species[vapply(species, grepl, logical(1), x = d$query, fixed = TRUE)]
+    if (!length(hit)) {
+      return(empty)
+    }
+    tibble::tibble(
+      query_index = d$query_index,
+      error_type = d$error_type,
+      error_message = d$error_message,
+      species = hit
+    )
+  })
+}
+
+#' Stop the pipeline when Entrez queries were lost
+#'
+#' Called as its own `targets` target so that an incomplete NCBI corpus is a
+#' build failure with the affected species named, rather than a silent hole
+#' that only shows up as an implausible zero in a figure. Set
+#' `allow_deficient = TRUE` (or `QCGENOM_ALLOW_DEFICIENT=true`) to downgrade
+#' it to a warning when a partial corpus is genuinely acceptable.
+#'
+#' @param deficient_queries List as returned in
+#'   `fetch_ncbi_sequences()$deficient_queries`
+#' @param species Character vector of species names, typically the BDQC list
+#' @param allow_deficient Logical, warn instead of erroring
+#' @return The tibble from [deficient_query_species()], invisibly
+#' @export
+assert_no_deficient_queries <- function(deficient_queries, species,
+                                        allow_deficient = identical(
+                                          tolower(Sys.getenv("QCGENOM_ALLOW_DEFICIENT")), "true"
+                                        )) {
+  lost <- deficient_query_species(deficient_queries, species)
+  if (nrow(lost) == 0) {
+    return(invisible(lost))
+  }
+  msg <- sprintf(
+    paste0(
+      "%d Entrez quer%s failed after retries, costing %d species.\n",
+      "Affected species are absent from the corpus and will read as zero coverage.\n",
+      "Errors: %s\nFirst species lost: %s"
+    ),
+    length(unique(lost$query_index)),
+    if (length(unique(lost$query_index)) == 1) "y" else "ies",
+    length(unique(lost$species)),
+    paste(unique(lost$error_type), collapse = ", "),
+    paste(utils::head(unique(lost$species), 8), collapse = ", ")
+  )
+  if (allow_deficient) {
+    warning(msg, call. = FALSE)
+  } else {
+    stop(msg, call. = FALSE)
+  }
+  invisible(lost)
 }
 
 #' Drop subspecies/infraspecific records from NCBI results

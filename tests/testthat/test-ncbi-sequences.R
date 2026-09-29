@@ -184,3 +184,69 @@ test_that("fetch_ncbi_sequences returns an empty result for a zero-count query",
   expect_equal(nrow(out$results), 0)
   expect_length(out$deficient_queries, 0)
 })
+
+test_that("with_entrez_retry retries a transient failure and then succeeds", {
+  attempts <- 0
+  result <- QCGenomLandscape:::with_entrez_retry(
+    {
+      attempts <<- attempts + 1
+      if (attempts < 3) stop("Timeout was reached")
+      "ok"
+    },
+    max_attempts = 4, sleep_fn = function(s) invisible(NULL)
+  )
+  expect_equal(result, "ok")
+  expect_equal(attempts, 3)
+})
+
+test_that("with_entrez_retry returns the condition after exhausting attempts", {
+  result <- QCGenomLandscape:::with_entrez_retry(
+    stop("Resolving timed out after 10001 milliseconds"),
+    max_attempts = 2, sleep_fn = function(s) invisible(NULL)
+  )
+  expect_s3_class(result, "condition")
+})
+
+test_that("fetch_ncbi_sequences recovers a query that fails once", {
+  calls <- 0
+  search_fn <- function(db, term, retmax) {
+    calls <<- calls + 1
+    if (calls == 1) stop("Timeout was reached")
+    list(count = 1, ids = "1")
+  }
+  summary_fn <- function(db, id) {
+    list(uid = "1", accessionversion = "AY1.1", title = "Ambystoma maculatum voucher",
+         taxid = 1, organism = "Ambystoma maculatum", moltype = "dna",
+         topology = "linear", genome = "mitochondrion", slen = 600,
+         createdate = "2020/01/01", updatedate = "2020/01/01",
+         subtype = "", subname = "")
+  }
+  out <- fetch_ncbi_sequences(
+    "(Ambystoma maculatum[Organism]) AND (COI[Gene])",
+    search_fn = search_fn, summary_fn = summary_fn,
+    sleep_fn = function(s) invisible(NULL), progress = FALSE
+  )
+  expect_equal(nrow(out$results), 1)
+  expect_length(out$deficient_queries, 0)
+})
+
+test_that("assert_no_deficient_queries names the species a failed batch cost", {
+  deficient <- list(list(
+    query_index = 1L,
+    query = "(Ambystoma maculatum[Organism] OR Anaxyrus americanus[Organism]) AND (COI[Gene])",
+    error_type = "entrez_search_ids",
+    error_message = "Timeout was reached",
+    timestamp = Sys.time()
+  ))
+  species <- c("Ambystoma maculatum", "Anaxyrus americanus", "Ursus americanus")
+
+  lost <- deficient_query_species(deficient, species)
+  expect_setequal(lost$species, c("Ambystoma maculatum", "Anaxyrus americanus"))
+
+  expect_error(assert_no_deficient_queries(deficient, species), "Ambystoma maculatum")
+  expect_warning(
+    assert_no_deficient_queries(deficient, species, allow_deficient = TRUE),
+    "costing 2 species"
+  )
+  expect_silent(assert_no_deficient_queries(list(), species))
+})

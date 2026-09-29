@@ -14,7 +14,6 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Language: en
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 8.0.0
 Depends:
     R (>= 4.1)
 Imports:
@@ -50,3 +49,4 @@ Suggests:
 Additional_repositories: https://bioconductor.org/packages/release/bioc
 Config/testthat/edition: 3
 VignetteBuilder: knitr
+Config/roxygen2/version: 8.1.0
