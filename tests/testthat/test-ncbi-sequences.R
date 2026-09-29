@@ -187,9 +187,11 @@ test_that("fetch_ncbi_sequences returns an empty result for a zero-count query",
 
 test_that("with_entrez_retry retries a transient failure and then succeeds", {
   attempts <- 0
+  # `<-`, not `<<-`: the expression is evaluated in this frame, where
+  # `attempts` already lives, so a superassignment would skip past it.
   result <- QCGenomLandscape:::with_entrez_retry(
     {
-      attempts <<- attempts + 1
+      attempts <- attempts + 1
       if (attempts < 3) stop("Timeout was reached")
       "ok"
     },

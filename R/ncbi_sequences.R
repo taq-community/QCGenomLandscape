@@ -69,10 +69,14 @@ build_ncbi_queries <- function(species_df, query_primers, batch_size = 1) {
 with_entrez_retry <- function(expr, max_attempts = 4, sleep_fn = Sys.sleep,
                                label = "entrez call") {
   expr <- substitute(expr)
+  # Capture the caller's frame ONCE, here. Calling parent.frame() inside the
+  # tryCatch() below resolves against tryCatch's own stack instead of the
+  # caller's, so the expression would be evaluated in the wrong environment.
+  caller <- parent.frame()
   last_error <- NULL
   for (attempt in seq_len(max_attempts)) {
     result <- tryCatch(
-      eval(expr, envir = parent.frame()),
+      eval(expr, envir = caller),
       error = function(e) {
         last_error <<- e
         NULL
