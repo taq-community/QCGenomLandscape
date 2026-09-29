@@ -86,3 +86,49 @@ test_that("assign_single_marker returns NA where no single marker applies", {
   expect_true(is.na(assign_single_marker("xyz123")))       # "Other"
   expect_true(is.na(assign_single_marker(NA_character_)))
 })
+
+test_that("assign_gene_group falls back to the DEFINITION line when /gene= is absent", {
+  # the fungal barcode: ITS regions are annotated as misc_RNA/rRNA with
+  # /product=, so `gene` is NA and these records used to vanish entirely
+  defs <- c(
+    "Abortiporus biennis strain CBS 148.40 internal transcribed spacer 1, partial sequence; 5.8S ribosomal RNA gene, complete sequence",
+    "Acarospora fuscata isolate OTU1995 5.8S ribosomal RNA gene, partial sequence; internal transcribed spacer 2, complete sequence"
+  )
+  expect_equal(
+    assign_gene_group(rep(NA_character_, 2), defs),
+    rep("Nuclear rRNA / ITS", 2)
+  )
+})
+
+test_that("the DEFINITION fallback never overrides an annotated gene", {
+  expect_equal(
+    assign_gene_group("COX1", "Homo sapiens internal transcribed spacer 1"),
+    "COI"
+  )
+})
+
+test_that("assign_gene_group is unchanged when no definition is supplied", {
+  expect_true(is.na(assign_gene_group(NA_character_)))
+})
+
+test_that("classify_definition_group recognises the other marker families", {
+  expect_equal(
+    classify_definition_group("Lepomis gibbosus cytochrome b (cytb) gene, partial cds"),
+    "Cytb"
+  )
+  expect_equal(
+    classify_definition_group("Danaus plexippus cytochrome c oxidase subunit I gene, partial cds"),
+    "COI"
+  )
+  expect_equal(
+    classify_definition_group("Boreogadus saida mitochondrion, complete genome"),
+    "Multi-gene / genome-scale record"
+  )
+})
+
+test_that("assign_single_marker labels definition-derived ITS records", {
+  expect_equal(
+    assign_single_marker(NA_character_, "strain X internal transcribed spacer 1, partial sequence"),
+    "ITS"
+  )
+})

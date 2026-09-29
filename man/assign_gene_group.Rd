@@ -4,10 +4,15 @@
 \alias{assign_gene_group}
 \title{Classify a gene name into a coarse marker group}
 \usage{
-assign_gene_group(gene)
+assign_gene_group(gene, definition = NULL)
 }
 \arguments{
 \item{gene}{Character vector of raw gene names (e.g. \code{"COX1"}, \code{"cytb"})}
+
+\item{definition}{Character vector of GenBank DEFINITION lines, same
+length as \code{gene} (e.g. \code{\link[=parse_gb_records]{parse_gb_records()}}'s \code{definition} column).
+Used only where \code{gene} is \code{NA}. Default \code{NULL} keeps the historical
+gene-only behaviour.}
 }
 \value{
 Character vector, one of \code{"COI"}, \code{"COII"}, \code{"COIII"}, \code{"Cytb"},
@@ -32,6 +37,15 @@ one, wildly different expected length, etc.), so grouping it with actual
 single-COI-marker records under a shared label would be misleading for
 anything downstream that treats \code{gene_group} as "same kind of sequence"
 (e.g. \code{\link[=flag_length_outliers]{flag_length_outliers()}}, \code{\link[=flag_barcode_gap_outliers]{flag_barcode_gap_outliers()}}).
+
+Records carrying no \verb{/gene=} tag at all fall back to their GenBank
+DEFINITION line when \code{definition} is supplied. This matters more than it
+sounds: the ITS region -- the fungal barcode -- is annotated as \code{misc_RNA}
+and \code{rRNA} features with \verb{/product=} qualifiers, almost never with
+\verb{/gene=}, so 147,740 of the 150,849 untagged records in the 2026-08-19
+corpus are ITS. Classifying on \code{gene} alone discards every one of them and
+reports fungi as ~4\% covered when the true figure is an order of magnitude
+higher.
 }
 \examples{
 assign_gene_group(c("COX1", "cytb", "12S", "rbcL", "trnL", "xyz123"))

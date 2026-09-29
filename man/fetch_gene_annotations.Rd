@@ -22,7 +22,9 @@ default \code{\link[rentrez:entrez_fetch]{rentrez::entrez_fetch()}}; injectable 
 \item{progress}{Logical, show a progress bar, default \code{TRUE}}
 }
 \value{
-Tibble with columns \code{accession}, \code{gene}, \code{location}
+Tibble with columns \code{accession}, \code{gene}, \code{location}, \code{definition}.
+Records with no \verb{/gene=} annotation yield one row with \code{gene = NA} so
+they stay in the corpus and can be classified from \code{definition}.
 }
 \description{
 Fetch gene annotations for a set of accessions via GenBank XML

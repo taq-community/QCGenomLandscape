@@ -22,8 +22,13 @@ build_summary_dataframe <- function(ncbi_results, genes_df, bdqc_taxo, ca_risk, 
   ncbi_results <- ncbi_results |>
     dplyr::mutate(species = organism)
 
+  # `definition` is the fallback for records with no /gene= tag (ITS, i.e.
+  # the fungal barcode). Tolerate its absence so older cached gene tables
+  # still work, at the cost of the fungal records they never captured.
   gene_counts <- genes_df |>
-    dplyr::mutate(gene_group = assign_gene_group(gene)) |>
+    dplyr::mutate(
+      gene_group = assign_gene_group(gene, definition = genes_df[["definition"]])
+    ) |>
     dplyr::left_join(ncbi_results |> dplyr::select(accession, species), by = "accession") |>
     dplyr::filter(!is.na(species), gene_group != "Other") |>
     dplyr::distinct(species, accession, gene_group) |>

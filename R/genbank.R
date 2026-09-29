@@ -5,7 +5,9 @@
 #' @param fetch_fn Function with signature `(db, id, rettype, retmode)`,
 #'   default [rentrez::entrez_fetch()]; injectable for testing without network access
 #' @param progress Logical, show a progress bar, default `TRUE`
-#' @return Tibble with columns `accession`, `gene`, `location`
+#' @return Tibble with columns `accession`, `gene`, `location`, `definition`.
+#'   Records with no `/gene=` annotation yield one row with `gene = NA` so
+#'   they stay in the corpus and can be classified from `definition`.
 #' @export
 fetch_gene_annotations <- function(accessions, batch_size = 200,
                                     fetch_fn = rentrez::entrez_fetch,
@@ -21,19 +23,38 @@ fetch_gene_annotations <- function(accessions, batch_size = 200,
         seq_nodes <- xml2::xml_find_all(gb, ".//GBSeq")
         purrr::map_df(seq_nodes, function(seq_node) {
           acc <- xml2::xml_text(xml2::xml_find_first(seq_node, ".//GBSeq_accession-version"))
+          definition <- xml2::xml_text(xml2::xml_find_first(seq_node, ".//GBSeq_definition"))
           gene_nodes <- xml2::xml_find_all(seq_node, ".//GBFeature[GBFeature_key='gene']")
+          # A record with no `gene` feature used to contribute zero rows and
+          # disappear from every downstream marker count. ITS deposits are
+          # annotated as misc_RNA/rRNA with /product=, not /gene=, so that
+          # silently deleted the fungal barcode from the corpus. Emit the
+          # record with gene = NA instead and let assign_gene_group() fall
+          # back to the DEFINITION line.
+          if (length(gene_nodes) == 0) {
+            return(tibble::tibble(
+              accession = acc, gene = NA_character_,
+              location = NA_character_, definition = definition
+            ))
+          }
           purrr::map_df(gene_nodes, function(node) {
             gene_name <- xml2::xml_text(
               xml2::xml_find_first(node, ".//GBQualifier[GBQualifier_name='gene']/GBQualifier_value")
             )
             location <- xml2::xml_text(xml2::xml_find_first(node, ".//GBFeature_location"))
-            tibble::tibble(accession = acc, gene = gene_name, location = location)
+            tibble::tibble(
+              accession = acc, gene = gene_name,
+              location = location, definition = definition
+            )
           })
         })
       },
       error = function(e) {
         warning(sprintf("Batch %d/%d failed: %s", i, length(batches), e$message))
-        tibble::tibble(accession = character(), gene = character(), location = character())
+        tibble::tibble(
+          accession = character(), gene = character(),
+          location = character(), definition = character()
+        )
       }
     )
   }, .progress = progress)

@@ -4,10 +4,15 @@
 \alias{assign_single_marker}
 \title{Resolve a gene annotation to a single comparable marker}
 \usage{
-assign_single_marker(gene)
+assign_single_marker(gene, definition = NULL)
 }
 \arguments{
 \item{gene}{Character vector of raw gene names, as annotated on the record}
+
+\item{definition}{Character vector of GenBank DEFINITION lines, same
+length as \code{gene}; passed through to \code{\link[=assign_gene_group]{assign_gene_group()}} so that
+records with no \verb{/gene=} tag (overwhelmingly ITS) resolve to \code{"ITS"}
+instead of dropping out of every per-marker statistic. Default \code{NULL}.}
 }
 \value{
 Character vector of marker labels, \code{NA} where no single marker applies
