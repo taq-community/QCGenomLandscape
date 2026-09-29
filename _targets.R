@@ -175,6 +175,18 @@ list(
     saveRDS(ncbi_sequences$high_id_queries, file.path(results_dir, "high_id_queries.rds"))
     file.path(results_dir, "high_id_queries.rds")
   }, format = "file"),
+  # A failed Entrez batch is a hole in the corpus, not a zero. The 2026-08-19
+  # run lost query 1 of 954 to a 10s DNS timeout, taking all 24 Quebec
+  # amphibians with it -- and the only trace was a list nothing read, so the
+  # hole was published as "Amphibians: 0% coverage". Fail the build here
+  # instead, naming the species; set QCGENOM_ALLOW_DEFICIENT=true to proceed
+  # with a knowingly partial corpus.
+  tar_target(
+    ncbi_corpus_complete,
+    QCGenomLandscape::assert_no_deficient_queries(
+      ncbi_sequences$deficient_queries, bdqc_species$species
+    )
+  ),
   # Geo-filtered (QC/CA) view -- demonstrates load_canvec_boundary()/
   # flag_within_boundary(), not saved to a named results/ file since the
   # original script only used this interactively
@@ -223,7 +235,7 @@ list(
   }, format = "file"),
 
   tar_target(genes_grouped, gene_annotations |>
-    dplyr::mutate(gene_group = QCGenomLandscape::assign_gene_group(gene)) |>
+    dplyr::mutate(gene_group = QCGenomLandscape::assign_gene_group(gene, definition)) |>
     dplyr::left_join(
       ncbi_sequences$results |>
         dplyr::mutate(species = organism) |>
@@ -359,8 +371,12 @@ list(
       dplyr::transmute(accession = sub("\\.\\d+$", "", accession), organism)
 
     seq_data |>
-      dplyr::filter(!is.na(gene), !is.na(seq_length), seq_length <= 10000) |>
-      dplyr::mutate(marker = QCGenomLandscape::assign_single_marker(gene)) |>
+      # `!is.na(gene)` used to sit here and silently excluded every record
+      # with no /gene= tag -- i.e. essentially all ITS. assign_single_marker()
+      # now resolves those from the DEFINITION line, and the !is.na(marker)
+      # filter below still drops anything genuinely unclassifiable.
+      dplyr::filter(!is.na(seq_length), seq_length <= 10000) |>
+      dplyr::mutate(marker = QCGenomLandscape::assign_single_marker(gene, definition)) |>
       dplyr::filter(!is.na(marker)) |>
       dplyr::inner_join(species_by_accession, by = "accession") |>
       dplyr::group_by(organism, marker) |>
