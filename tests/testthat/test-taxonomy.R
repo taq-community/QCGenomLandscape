@@ -29,3 +29,38 @@ test_that("classify_taxon_group is vectorized", {
   )
   expect_equal(result, c("Fish", "Birds", "Fungi"))
 })
+
+test_that("classify_taxon_group gives arachnids their own group", {
+  expect_equal(classify_taxon_group("Arthropods", class = "Arachnida"), "Arachnids")
+  # still distinct from the insect/crustacean branches above it
+  expect_equal(classify_taxon_group("Arthropods", class = "Collembola"), "Other")
+})
+
+test_that("classify_taxon_group routes diatoms and brown algae to Algae", {
+  # filed under "Other taxons" in the backbone, so group_en alone misses them
+  expect_equal(
+    classify_taxon_group("Other taxons", class = "Bacillariophyceae",
+                         phylum = "Ochrophyta", kingdom = "Chromista"),
+    "Algae"
+  )
+  expect_equal(
+    classify_taxon_group("Other taxons", class = "Phaeophyceae",
+                         phylum = "Ochrophyta", kingdom = "Chromista"),
+    "Algae"
+  )
+  expect_equal(classify_taxon_group("Algae"), "Algae")
+})
+
+test_that("classify_taxon_group keeps water moulds out of Algae", {
+  # Oomycota are fungus-like chromists, not algae
+  expect_equal(
+    classify_taxon_group("Other taxons", phylum = "Oomycota", kingdom = "Chromista"),
+    "Other"
+  )
+})
+
+test_that("classify_taxon_group no longer folds algae into Plants", {
+  expect_equal(classify_taxon_group("Angiosperms"), "Plants")
+  expect_equal(classify_taxon_group("Bryophytes"), "Plants")
+  expect_false(classify_taxon_group("Algae") == "Plants")
+})

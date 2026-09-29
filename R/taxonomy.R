@@ -1,8 +1,15 @@
 #' Classify BDQC taxonomic groups into finer display categories
 #'
-#' Reclassifies the coarse `group_en` column of the BDQC species list into
-#' finer taxonomic categories used for figures (e.g. splitting mammals into
-#' marine/terrestrial, arthropods into insects/crustaceans).
+#' Reclassifies the coarse `group_en` column of the Biodiversite Quebec
+#' taxonomic backbone into finer categories used for figures (e.g. splitting
+#' mammals into marine/terrestrial, arthropods into insects/crustaceans/
+#' arachnids).
+#'
+#' Two branches deliberately key on `phylum`/`class` rather than `group_en`,
+#' because the backbone's coarse groups cut across the distinction the
+#' figures need: arachnids are pooled with all other non-insect,
+#' non-crustacean arthropods, and diatoms and brown algae are filed under
+#' `"Other taxons"` rather than `"Algae"`.
 #'
 #' @param group_en Character vector, BDQC's coarse taxonomic group
 #' @param order Character vector, taxonomic order (same length as `group_en`)
@@ -25,9 +32,20 @@ classify_taxon_group <- function(group_en, order = NA, class = NA, phylum = NA, 
     group_en == "Arthropods" & class == "Insecta" ~ "Insects",
     group_en == "Arthropods" &
       class %in% c("Malacostraca", "Branchiopoda", "Copepoda", "Maxillopoda", "Ostracoda") ~ "Crustaceans",
+    # Arachnids were the largest component of the "Other" catch-all (641 of
+    # 1,535 species) at 85% marker coverage -- better covered than molluscs
+    # or crustaceans -- pooled there with barely-sequenced chromists. Two
+    # opposite stories averaged into one bar; they get their own group.
+    group_en == "Arthropods" & class == "Arachnida" ~ "Arachnids",
     group_en == "Other invertebrates" & phylum == "Mollusca" ~ "Mollusks",
+    # Ochrophyta (diatoms, brown algae) are filed under "Other taxons" in the
+    # Biodiversite Quebec backbone, so keying the algae branch on group_en
+    # alone sent all 317 of them to "Other". They are matched on phylum here.
+    # Oomycota (water moulds) are deliberately NOT included: they are
+    # fungus-like chromists, not algae.
+    group_en == "Algae" | phylum == "Ochrophyta" ~ "Algae",
     group_en %in% c("Angiosperms", "Conifers", "Bryophytes",
-                     "Vascular cryptogam", "Other plants", "Algae") ~ "Plants",
+                     "Vascular cryptogam", "Other plants") ~ "Plants",
     group_en == "Fungi" ~ "Fungi",
     group_en == "Other taxons" & kingdom == "Bacteria" ~ "Bacteria",
     group_en == "Other taxons" & kingdom == "Protozoa" ~ "Protozoa",
