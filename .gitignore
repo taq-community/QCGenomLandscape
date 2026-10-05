@@ -38,3 +38,5 @@ docs
 **/*.quarto_ipynb
 *.qmd
 results/*.rds
+_targets_backup_*/
+results_backup_*/
