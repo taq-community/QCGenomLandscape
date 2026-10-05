@@ -116,6 +116,9 @@ with a BOLD-sourced <code>edna_occurrences</code>) – this has little effect on
 presence-based metrics <code><a href="summarize_edna_contribution.html">summarize_edna_contribution()</a></code> computes from the
 result, which count distinct (species, cell) / (species, year) pairs, not
 raw record volume.</p>
+<p>Requires the DuckDB <code>httpfs</code> and <code>spatial</code> extensions. Install them
+once with <code>duckdb::duckdb_install_extension(c("httpfs", "spatial"))</code> before
+first use.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

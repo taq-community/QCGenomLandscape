@@ -5,8 +5,14 @@
 - [`align_sequences()`](https://taq-community.github.io/QCGenomLandscape/reference/align_sequences.md)
   : Align a set of DNA sequences
 
+- [`assert_no_deficient_queries()`](https://taq-community.github.io/QCGenomLandscape/reference/assert_no_deficient_queries.md)
+  : Stop the pipeline when Entrez queries were lost
+
 - [`assign_gene_group()`](https://taq-community.github.io/QCGenomLandscape/reference/assign_gene_group.md)
   : Classify a gene name into a coarse marker group
+
+- [`assign_single_marker()`](https://taq-community.github.io/QCGenomLandscape/reference/assign_single_marker.md)
+  : Resolve a gene annotation to a single comparable marker
 
 - [`atlas_molecular_datasets()`](https://taq-community.github.io/QCGenomLandscape/reference/atlas_molecular_datasets.md)
   : The 16 Atlas datasets whose records are already
@@ -29,12 +35,23 @@
   : Build the per-species genomic-data summary table, reading inputs
   from disk
 
+- [`classify_definition_group()`](https://taq-community.github.io/QCGenomLandscape/reference/classify_definition_group.md)
+  : Classify a GenBank DEFINITION line into a coarse marker group
+
 - [`classify_taxon_group()`](https://taq-community.github.io/QCGenomLandscape/reference/classify_taxon_group.md)
   : Classify BDQC taxonomic groups into finer display categories
 
 - [`compare_edna_atlas_coverage()`](https://taq-community.github.io/QCGenomLandscape/reference/compare_edna_atlas_coverage.md)
   : Compare eDNA vs traditional occurrence coverage against the Atlas,
   on a hex grid
+
+- [`deficient_query_species()`](https://taq-community.github.io/QCGenomLandscape/reference/deficient_query_species.md)
+  : Summarise the species lost to failed Entrez queries
+
+- [`extract_binomial()`](https://taq-community.github.io/QCGenomLandscape/reference/extract_binomial.md)
+  :
+
+  Extract a `Genus species` binomial, preserving vector length
 
 - [`extract_edna_occurrences()`](https://taq-community.github.io/QCGenomLandscape/reference/extract_edna_occurrences.md)
   : Normalize NCBI + BOLD records into a common eDNA occurrence table
@@ -57,6 +74,9 @@
 
 - [`fetch_ncbi_sequences()`](https://taq-community.github.io/QCGenomLandscape/reference/fetch_ncbi_sequences.md)
   : Fetch NCBI nucleotide records for a set of species/marker queries
+
+- [`filter_named_species()`](https://taq-community.github.io/QCGenomLandscape/reference/filter_named_species.md)
+  : Drop subspecies/infraspecific records from NCBI results
 
 - [`flag_barcode_gap_outliers()`](https://taq-community.github.io/QCGenomLandscape/reference/flag_barcode_gap_outliers.md)
   : Flag DNA sequences whose distance to conspecifics is a group outlier

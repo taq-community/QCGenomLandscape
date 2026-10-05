@@ -132,14 +132,29 @@ longueur de séquence (`slen`).
 Pour chaque paire (espèce × marqueur) comportant plus d’un
 enregistrement, la cible `intraspecific_variation` calcule le
 coefficient de variation (CV = SD / médiane × 100) de la longueur des
-séquences (`slen`). Un CV élevé signale des séquences de longueurs
-disparates pour le même espèce et le même marqueur — indicateur probable
-de qualité moindre, d’amplicons mixtes ou de soumissions hétérogènes.
+séquences. Un CV élevé signale des séquences de longueurs disparates
+pour la même espèce et le même marqueur — indicateur probable de qualité
+moindre, d’amplicons mixtes ou de soumissions hétérogènes.
 
-Les séquences de taille \> 10 000 pb sont exclues avant le calcul : les
-génomes complets et mitogenomes renvoyés par les requêtes de gènes
-(p. ex., `COI[Gene]` retourne aussi les mitogenomes ~15–17 kb) gonflent
-le CV de façon non informative.
+**Le marqueur est celui annoté sur chaque enregistrement**, résolu par
+[`assign_single_marker()`](https://taq-community.github.io/QCGenomLandscape/reference/assign_single_marker.md)
+sur `seq_data$gene`, et non le jeu d’amorces de la requête Entrez. La
+distinction est déterminante : grouper sur le jeu d’amorces (p. ex.
+`COI,12S,16S,cytb`, partagé par tous les vertébrés) revient à comparer
+des marqueurs dont les longueurs attendues diffèrent d’un ordre de
+grandeur, et le CV mesure alors le mélange de marqueurs plutôt que la
+qualité des séquences.
+[`assign_single_marker()`](https://taq-community.github.io/QCGenomLandscape/reference/assign_single_marker.md)
+descend aussi sous les trois étiquettes composites de
+[`assign_gene_group()`](https://taq-community.github.io/QCGenomLandscape/reference/assign_gene_group.md)
+(rbcL / matK / trnL sont séparés, de même que 5.8S / LSU / SSU et RPB1 /
+RPB2), et écarte les enregistrements multi-gènes ou non classés, qui ne
+correspondent à aucun marqueur unique.
+
+Les séquences de taille \> 10 000 pb restent exclues avant le calcul :
+un mitogénome dont un seul gène est annoté (p. ex. `COI[Gene]` retourne
+aussi des mitogenomes ~15–17 kb) échapperait autrement au filtre
+multi-gènes et gonflerait le CV de façon non informative.
 
 ### 10. Export vers Arbutus (Swift)
 

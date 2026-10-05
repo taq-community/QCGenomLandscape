@@ -70,3 +70,7 @@ presence-based metrics
 [`summarize_edna_contribution()`](https://taq-community.github.io/QCGenomLandscape/reference/summarize_edna_contribution.md)
 computes from the result, which count distinct (species, cell) /
 (species, year) pairs, not raw record volume.
+
+Requires the DuckDB `httpfs` and `spatial` extensions. Install them once
+with `duckdb::duckdb_install_extension(c("httpfs", "spatial"))` before
+first use.

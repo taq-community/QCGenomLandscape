@@ -8,7 +8,7 @@ between `create_dataframe.R` (short labels,
 ## Usage
 
 ``` r
-assign_gene_group(gene)
+assign_gene_group(gene, definition = NULL)
 ```
 
 ## Arguments
@@ -16,6 +16,14 @@ assign_gene_group(gene)
 - gene:
 
   Character vector of raw gene names (e.g. `"COX1"`, `"cytb"`)
+
+- definition:
+
+  Character vector of GenBank DEFINITION lines, same length as `gene`
+  (e.g.
+  [`parse_gb_records()`](https://taq-community.github.io/QCGenomLandscape/reference/parse_gb_records.md)'s
+  `definition` column). Used only where `gene` is `NA`. Default `NULL`
+  keeps the historical gene-only behaviour.
 
 ## Value
 
@@ -40,6 +48,15 @@ anything downstream that treats `gene_group` as "same kind of sequence"
 (e.g.
 [`flag_length_outliers()`](https://taq-community.github.io/QCGenomLandscape/reference/flag_length_outliers.md),
 [`flag_barcode_gap_outliers()`](https://taq-community.github.io/QCGenomLandscape/reference/flag_barcode_gap_outliers.md)).
+
+Records carrying no `/gene=` tag at all fall back to their GenBank
+DEFINITION line when `definition` is supplied. This matters more than it
+sounds: the ITS region – the fungal barcode – is annotated as `misc_RNA`
+and `rRNA` features with `/product=` qualifiers, almost never with
+`/gene=`, so 147,740 of the 150,849 untagged records in the 2026-08-19
+corpus are ITS. Classifying on `gene` alone discards every one of them
+and reports fungi as ~4% covered when the true figure is an order of
+magnitude higher.
 
 ## Examples
 

@@ -231,14 +231,27 @@ médiane/SD/Q25/Q75 de la longueur de séquence (<code>slen</code>).</p>
 <p>Pour chaque paire (espèce × marqueur) comportant plus d’un
 enregistrement, la cible <code>intraspecific_variation</code> calcule le
 coefficient de variation (CV = SD / médiane × 100) de la longueur des
-séquences (<code>slen</code>). Un CV élevé signale des séquences de
-longueurs disparates pour le même espèce et le même marqueur —
-indicateur probable de qualité moindre, d’amplicons mixtes ou de
-soumissions hétérogènes.</p>
-<p>Les séquences de taille &gt; 10 000 pb sont exclues avant le calcul :
-les génomes complets et mitogenomes renvoyés par les requêtes de gènes
-(p. ex., <code>COI[Gene]</code> retourne aussi les mitogenomes ~15–17
-kb) gonflent le CV de façon non informative.</p>
+séquences. Un CV élevé signale des séquences de longueurs disparates
+pour la même espèce et le même marqueur — indicateur probable de qualité
+moindre, d’amplicons mixtes ou de soumissions hétérogènes.</p>
+<p><strong>Le marqueur est celui annoté sur chaque
+enregistrement</strong>, résolu par <code><a href="../reference/assign_single_marker.html">assign_single_marker()</a></code>
+sur <code>seq_data$gene</code>, et non le jeu d’amorces de la requête
+Entrez. La distinction est déterminante : grouper sur le jeu d’amorces
+(p. ex. <code>COI,12S,16S,cytb</code>, partagé par tous les vertébrés)
+revient à comparer des marqueurs dont les longueurs attendues diffèrent
+d’un ordre de grandeur, et le CV mesure alors le mélange de marqueurs
+plutôt que la qualité des séquences. <code><a href="../reference/assign_single_marker.html">assign_single_marker()</a></code>
+descend aussi sous les trois étiquettes composites de
+<code><a href="../reference/assign_gene_group.html">assign_gene_group()</a></code> (rbcL / matK / trnL sont séparés, de
+même que 5.8S / LSU / SSU et RPB1 / RPB2), et écarte les enregistrements
+multi-gènes ou non classés, qui ne correspondent à aucun marqueur
+unique.</p>
+<p>Les séquences de taille &gt; 10 000 pb restent exclues avant le
+calcul : un mitogénome dont un seul gène est annoté (p. ex.
+<code>COI[Gene]</code> retourne aussi des mitogenomes ~15–17 kb)
+échapperait autrement au filtre multi-gènes et gonflerait le CV de façon
+non informative.</p>
 </div>
 <div class="section level3">
 <h3 id="export-vers-arbutus-swift">10. Export vers Arbutus (Swift)<a class="anchor" aria-label="anchor" href="#export-vers-arbutus-swift"></a>

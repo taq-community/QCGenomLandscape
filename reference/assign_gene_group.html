@@ -47,7 +47,7 @@ and <code>taxon_representation.R</code> (descriptive <code>rRNA</code>/photosynt
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">assign_gene_group</span><span class="op">(</span><span class="va">gene</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">assign_gene_group</span><span class="op">(</span><span class="va">gene</span>, definition <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -56,6 +56,13 @@ and <code>taxon_representation.R</code> (descriptive <code>rRNA</code>/photosynt
 
 <dl><dt id="arg-gene">gene<a class="anchor" aria-label="anchor" href="#arg-gene"></a></dt>
 <dd><p>Character vector of raw gene names (e.g. <code>"COX1"</code>, <code>"cytb"</code>)</p></dd>
+
+
+<dt id="arg-definition">definition<a class="anchor" aria-label="anchor" href="#arg-definition"></a></dt>
+<dd><p>Character vector of GenBank DEFINITION lines, same
+length as <code>gene</code> (e.g. <code><a href="parse_gb_records.html">parse_gb_records()</a></code>'s <code>definition</code> column).
+Used only where <code>gene</code> is <code>NA</code>. Default <code>NULL</code> keeps the historical
+gene-only behaviour.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -78,6 +85,14 @@ one, wildly different expected length, etc.), so grouping it with actual
 single-COI-marker records under a shared label would be misleading for
 anything downstream that treats <code>gene_group</code> as "same kind of sequence"
 (e.g. <code><a href="flag_length_outliers.html">flag_length_outliers()</a></code>, <code><a href="flag_barcode_gap_outliers.html">flag_barcode_gap_outliers()</a></code>).</p>
+<p>Records carrying no <code>/gene=</code> tag at all fall back to their GenBank
+DEFINITION line when <code>definition</code> is supplied. This matters more than it
+sounds: the ITS region – the fungal barcode – is annotated as <code>misc_RNA</code>
+and <code>rRNA</code> features with <code>/product=</code> qualifiers, almost never with
+<code>/gene=</code>, so 147,740 of the 150,849 untagged records in the 2026-08-19
+corpus are ITS. Classifying on <code>gene</code> alone discards every one of them and
+reports fungi as ~4% covered when the true figure is an order of magnitude
+higher.</p>
     </div>
 
     <div class="section level2">

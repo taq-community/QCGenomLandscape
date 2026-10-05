@@ -15,6 +15,8 @@ fetch_ncbi_sequences(
   high_id_threshold = 500,
   search_fn = rentrez::entrez_search,
   summary_fn = rentrez::entrez_summary,
+  max_attempts = 4,
+  sleep_fn = Sys.sleep,
   progress = TRUE
 )
 ```
@@ -48,6 +50,20 @@ fetch_ncbi_sequences(
 
   Function with signature `(db, id)`, default
   [`rentrez::entrez_summary()`](https://docs.ropensci.org/rentrez/reference/entrez_summary.html)
+
+- max_attempts:
+
+  Integer, attempts per Entrez call before the query is recorded as
+  deficient, default 4 (exponential backoff: 2s, 4s, 8s). Transient
+  timeouts and 502s are the norm at this query volume, so a single
+  attempt loses whole batches of species – see
+  [`with_entrez_retry()`](https://taq-community.github.io/QCGenomLandscape/reference/with_entrez_retry.md).
+
+- sleep_fn:
+
+  Function with signature `(seconds)`, default
+  [`Sys.sleep()`](https://rdrr.io/r/base/Sys.sleep.html); injectable so
+  retry backoff doesn't slow down tests
 
 - progress:
 

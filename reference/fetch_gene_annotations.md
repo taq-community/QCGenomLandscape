@@ -35,4 +35,6 @@ fetch_gene_annotations(
 
 ## Value
 
-Tibble with columns `accession`, `gene`, `location`
+Tibble with columns `accession`, `gene`, `location`, `definition`.
+Records with no `/gene=` annotation yield one row with `gene = NA` so
+they stay in the corpus and can be classified from `definition`.

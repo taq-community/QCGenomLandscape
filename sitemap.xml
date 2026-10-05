@@ -8,15 +8,20 @@
 <url><loc>https://taq-community.github.io/QCGenomLandscape/index.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/QCGenomLandscape-package.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/align_sequences.html</loc></url>
+<url><loc>https://taq-community.github.io/QCGenomLandscape/reference/assert_no_deficient_queries.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/assign_gene_group.html</loc></url>
+<url><loc>https://taq-community.github.io/QCGenomLandscape/reference/assign_single_marker.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/atlas_molecular_datasets.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/build_hex_grid_cells.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/build_ncbi_queries.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/build_sequence_qc_table.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/build_summary_dataframe.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/build_summary_dataframe_from_files.html</loc></url>
+<url><loc>https://taq-community.github.io/QCGenomLandscape/reference/classify_definition_group.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/classify_taxon_group.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/compare_edna_atlas_coverage.html</loc></url>
+<url><loc>https://taq-community.github.io/QCGenomLandscape/reference/deficient_query_species.html</loc></url>
+<url><loc>https://taq-community.github.io/QCGenomLandscape/reference/extract_binomial.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/extract_edna_occurrences.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/fetch_atlas_parquet.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/fetch_bold_sequences.html</loc></url>
@@ -24,6 +29,7 @@
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/fetch_gene_annotations.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/fetch_ncbi_genomes.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/fetch_ncbi_sequences.html</loc></url>
+<url><loc>https://taq-community.github.io/QCGenomLandscape/reference/filter_named_species.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/flag_barcode_gap_outliers.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/flag_length_outliers.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/flag_within_boundary.html</loc></url>
@@ -44,5 +50,6 @@
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/summarize_edna_contribution.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/swift_auth.html</loc></url>
 <url><loc>https://taq-community.github.io/QCGenomLandscape/reference/upload_to_swift.html</loc></url>
+<url><loc>https://taq-community.github.io/QCGenomLandscape/reference/with_entrez_retry.html</loc></url>
 </urlset>
 

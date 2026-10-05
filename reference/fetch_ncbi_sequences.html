@@ -57,6 +57,8 @@ an <code>NCBI_API_KEY</code>.</p>
 <span>  high_id_threshold <span class="op">=</span> <span class="fl">500</span>,</span>
 <span>  search_fn <span class="op">=</span> <span class="fu">rentrez</span><span class="fu">::</span><span class="va"><a href="https://docs.ropensci.org/rentrez/reference/entrez_search.html" class="external-link">entrez_search</a></span>,</span>
 <span>  summary_fn <span class="op">=</span> <span class="fu">rentrez</span><span class="fu">::</span><span class="va"><a href="https://docs.ropensci.org/rentrez/reference/entrez_summary.html" class="external-link">entrez_summary</a></span>,</span>
+<span>  max_attempts <span class="op">=</span> <span class="fl">4</span>,</span>
+<span>  sleep_fn <span class="op">=</span> <span class="va">Sys.sleep</span>,</span>
 <span>  progress <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -91,6 +93,18 @@ flagged in <code>high_id_queries</code>, default 500</p></dd>
 <dt id="arg-summary-fn">summary_fn<a class="anchor" aria-label="anchor" href="#arg-summary-fn"></a></dt>
 <dd><p>Function with signature <code>(db, id)</code>, default
 <code><a href="https://docs.ropensci.org/rentrez/reference/entrez_summary.html" class="external-link">rentrez::entrez_summary()</a></code></p></dd>
+
+
+<dt id="arg-max-attempts">max_attempts<a class="anchor" aria-label="anchor" href="#arg-max-attempts"></a></dt>
+<dd><p>Integer, attempts per Entrez call before the query is
+recorded as deficient, default 4 (exponential backoff: 2s, 4s, 8s).
+Transient timeouts and 502s are the norm at this query volume, so a
+single attempt loses whole batches of species – see <code><a href="with_entrez_retry.html">with_entrez_retry()</a></code>.</p></dd>
+
+
+<dt id="arg-sleep-fn">sleep_fn<a class="anchor" aria-label="anchor" href="#arg-sleep-fn"></a></dt>
+<dd><p>Function with signature <code>(seconds)</code>, default <code><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep()</a></code>;
+injectable so retry backoff doesn't slow down tests</p></dd>
 
 
 <dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>
